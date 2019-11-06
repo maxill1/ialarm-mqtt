@@ -1,0 +1,20 @@
+{
+  "name": "ialarm-mqtt",
+  "version": "0.0.1",
+  "description": "ialarm to mqtt bridge",
+  "main": "mqtt-ialarm.js",
+  "scripts": {
+    "start": "node mqtt-ialarm.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ialarm",
+    "mqtt"
+  ],
+  "author": "Luca Mazzilli",
+  "license": "MIT",
+  "dependencies": {
+    "ialarm": "0.0.9",
+    "mqtt": "^3.0.0"
+  }
+}

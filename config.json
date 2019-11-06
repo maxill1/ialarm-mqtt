@@ -1,0 +1,71 @@
+{
+    "alarmStatus" : {
+        "ARMED_AWAY": "armAway",
+        "ARM_AWAY"  : "armAway",
+        "ARMED_HOME": "armHome",
+        "ARM_HOME"  : "armHome",
+        "DISARMED"  : "disarm",
+        "DISARM"    : "disarm",
+        "CANCEL"    : "cancel",
+        "TRIGGERED" : "trigger"
+    },
+    "server" : {
+        "host": "192.168.1.81",
+        "port": "80",
+        "username": "admin",
+        "password": "password",
+        "zones": 17,
+        "polling" : {
+            "status" : 30000,
+            "events" : 10000
+        }
+    },
+    "mqtt" : {
+        "host": "192.168.1.82",
+        "port": "1883",
+        "username": "admin",
+        "password": "password"
+    },
+    "topics" : {
+        "availability": "homeassistant/alarm_control_panel/ialarm/availability",
+        "alarmStatus" : "homeassistant/alarm_control_panel/ialarm/state",
+        "sensorStatus": "homeassistant/sensor/ialarm/state",
+        "error" : "homeassistant/alarm_control_panel/ialarm/error",
+        "event" : "homeassistant/alarm_control_panel/ialarm/event",
+        "alarmSet" : "homeassistant/alarm_control_panel/ialarm/set"
+    },
+    "autodiscovery": {
+        "topics" : {
+            "alarmConfig" : "homeassistant/alarm_control_panel/ialarm/config",
+            "sensorConfig" : "homeassistant/sensor/ialarm/${zoneId}/config"
+        },
+        "code" : "1234",
+        "zoneName" : "Zona",
+        "zones" : {
+            "default" : {
+                "icon" : "mdi:walk"
+            },
+            "perimetrale" : {
+                "icon" : "mdi:run-fast"
+            },
+            "ritardata" : {
+                "icon" : "mdi:door"
+            },
+            "interna" : {
+                "icon" : "mdi:walk"
+            },
+            "emergenza" : {
+                "icon" : "mdi:alert"
+            },
+            "24 ore" : {
+                "icon" : "mdi:water"
+            },
+            "incendio" : {
+                "icon" : "mdi:smoke-detector"
+            },
+            "chiavi" : {
+                "icon" : "mdi:key"
+            }
+        }
+    }
+}
