@@ -34,7 +34,7 @@
         "event" : "homeassistant/alarm_control_panel/ialarm/event",
         "alarmSet" : "homeassistant/alarm_control_panel/ialarm/set"
     },
-    "autodiscovery": {
+    "hadiscovery": {
         "topics" : {
             "alarmConfig" : "homeassistant/alarm_control_panel/ialarm/config",
             "sensorConfig" : "homeassistant/sensor/ialarm/${zoneId}/config"
