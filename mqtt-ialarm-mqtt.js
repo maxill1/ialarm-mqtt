@@ -17,9 +17,13 @@ function ialarmPublisher(){
       }
     }
 
-    this.connectAndSubscribe = function(){
+    this.connectAndSubscribe = function(alarmSetCallback){
       console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
-      client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {username: config.mqtt.username, password: config.mqtt.password})
+      client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
+        username: config.mqtt.username, 
+        password: config.mqtt.password,
+        will: { topic: config.topics.availability, payload: 'offline' }
+      })
        
        client.on('connect', function () {
  
@@ -39,14 +43,11 @@ function ialarmPublisher(){
        client.on('message', function (topic, message) {
  
          if(topic === config.topics.alarmSet){
-           //TODO
-           console.log("Received alarm set")
+          var commandType =  message.toString();
+          if(alarmSetCallback){
+            alarmSetCallback(commandType);
+          }
          }
- 
-         // message is Buffer
-         console.log(topic, message.toString())
- 
-         client.end()
        })
  
        client.on('error', function (err) {
