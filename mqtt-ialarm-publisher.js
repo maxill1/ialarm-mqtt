@@ -1,22 +1,29 @@
 const config = require('./mqtt-ialarm-config');
+const iAlarmHaDiscovery = require('./mqtt-ialarm-hadiscovery');
 const mqtt = require('mqtt');
 
 function ialarmPublisher(){
     var client  = undefined;
-    var disabled = true; //TODO
 
-    var _publish = function(topic, data){
-      if(client && !disabled){
+    var _publish = function(topic, data, options){
+      if(client){
         console.log("sending topic: ", topic, data); 
-        client.publish(topic, data);
+        if(typeof data !== "string"){
+          data = JSON.stringify(data);
+        }
+        client.publish(topic, data, options);
       }else{
         console.log(topic+ " - error publishing...not connected");
       }
     }
 
-    this.connectAndSubscribe = function(){
+    this.connectAndSubscribe = function(alarmSetCallback){
       console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
-      client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {username: config.mqtt.username, password: config.mqtt.password})
+      client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
+        username: config.mqtt.username, 
+        password: config.mqtt.password,
+        will: { topic: config.topics.availability, payload: 'offline' }
+      })
        
        client.on('connect', function () {
  
@@ -36,14 +43,11 @@ function ialarmPublisher(){
        client.on('message', function (topic, message) {
  
          if(topic === config.topics.alarmSet){
-           //TODO
-           console.log("Received alarm set")
+          var commandType =  message.toString();
+          if(alarmSetCallback){
+            alarmSetCallback(commandType);
+          }
          }
- 
-         // message is Buffer
-         console.log(topic, message.toString())
- 
-         client.end()
        })
  
        client.on('error', function (err) {
@@ -88,6 +92,14 @@ function ialarmPublisher(){
         _publish(m.topic, m.payload);
     }
 
+    this.publishHomeAssistantMqttDiscovery = function(zones, reset){
+      //mqtt discovery messages to publish
+      var messages = new iAlarmHaDiscovery(zones, reset).createMessages();
+      for (let index = 0; index < messages.length; index++) {
+        const m = messages[index];
+        _publish(m.topic, m.payload, {retain: true});
+      }
+    }
 
 }
 
