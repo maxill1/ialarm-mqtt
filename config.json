@@ -14,7 +14,7 @@
         "port": "80",
         "username": "admin",
         "password": "password",
-        "zones": 17,
+        "zones": 40,
         "polling" : {
             "status" : 30000,
             "events" : 10000
