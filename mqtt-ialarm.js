@@ -168,6 +168,36 @@ function readEvents(){
     }
 }
 
+function commandHandler(commandType){
+
+    var commandName = config.alarmStatus[commandType];
+    if(!commandName){
+      console.error("Received invalida alarm command: "+commandType);
+      return;
+    }
+
+    console.log("Received alarm command: "+commandType)
+    const alarm = newIAlarm();
+    alarm.on("command", function (status) {
+      console.log("new alarm status: "+status.status);
+      //notify status and last event
+      publisher.publishStateSensor(status.zones);
+      publisher.publishStateIAlarm(status.status);
+
+      setTimeout(function(){
+        //readStatus();
+        readEvents();
+      }, 500);
+    });
+    alarm.on("response", function (response) {
+      //console.log("Responded: "+response);
+    });
+    alarm.on("error", function (err) {
+      console.error(err);
+    });
+
+    alarm[commandName]();
+}
 
 
 //start loop
@@ -180,7 +210,7 @@ function start(){
     //load zone names
     initZoneCache();
 
-    publisher.connectAndSubscribe();
+    publisher.connectAndSubscribe(commandHandler);
 
     //alarm and sensor status
     setInterval(function(){
@@ -195,36 +225,5 @@ function start(){
     }, config.server.polling.events);
 
 }
-
-
-//TODO alarm set
-function alarmCommand(commandType){
-
-    var commandName = config.alarmStatus[commandType];
-    if(!commandName){
-      handleError("invalid command: "+commandType);
-      return;
-    }
-
-    const alarm = newIAlarm(node);
-
-    alarm.on("command", function (commandResponse) {
-      console.log("status: "+JSON.stringify(commandResponse));
-      //notify status and last event
-      setTimeout(function(){
-        readStatus();
-        readEvents();
-      }, 500);
-    });
-    alarm.on("response", function (response) {
-      //console.log("Responded: "+response);
-    });
-    alarm.on("error", function (err) {
-      handleError(node, err);
-    });
-
-    alarm[commandName]();
-}
-
 
 start();
