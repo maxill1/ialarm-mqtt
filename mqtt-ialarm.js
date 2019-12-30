@@ -1,7 +1,7 @@
 var mqtt = require('mqtt');
 const iAlarm = require("ialarm");
 const config = require('./mqtt-ialarm-config');
-const publisher = new (require('./mqtt-ialarm-mqtt'));
+const publisher = new (require('./mqtt-ialarm-publisher'));
 
 var globalContext = {};
 
