@@ -1,8 +1,8 @@
 
-const config = require('./mqtt-ialarm-constants');
+const config = require('./mqtt-ialarm-config');
 var pjson = require('./package.json');
 
-function autodiscovery (zonesToConfig, reset){
+function iAlarmHaDiscovery (zonesToConfig, reset){
 
     var deviceConfig = {"manufacturer": "Antifurto365",
                     "identifiers": "ialarm",
@@ -14,22 +14,22 @@ function autodiscovery (zonesToConfig, reset){
 
     var configSensor = function(zone, i){
         var m = {};
-        m.topic = config.autodiscovery.topic.sensorConfig.replace("${zoneId}", zone.id);
+        m.topic = config.hadiscovery.topics.sensorConfig.replace("${zoneId}", zone.id);
         
         if(reset){
             m.payload = "";
         }else{
             //TODO decode types
-            var icon = config.autodiscovery.zones.default.icon;
+            var icon = config.hadiscovery.zones.default.icon;
             if(zone.type){
                 var type = zone.type.toLowerCase();
-                if(config.autodiscovery.zones[type]
-                    && config.autodiscovery.zones[type].icon){
-                    icon = config.autodiscovery.zones[type].icon;
+                if(config.hadiscovery.zones[type]
+                    && config.hadiscovery.zones[type].icon){
+                    icon = config.hadiscovery.zones[type].icon;
                 }
             }
             
-            var zoneName = config.autodiscovery.zoneName;
+            var zoneName = config.hadiscovery.zoneName;
             if(!zoneName){
                 zoneName = "Zone";
             }
@@ -37,7 +37,7 @@ function autodiscovery (zonesToConfig, reset){
             //TODO trasformare in binary sensors https://www.home-assistant.io/integrations/binary_sensor/
             m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
                         //device_class: "None",
-                        availability_topic : config.topic.availability,
+                        availability_topic : config.topics.availability,
                         state_topic: "homeassistant/sensor/ialarm/state", 
                         value_template: "{{ value_json["+i+"].message}}",
                         unique_id : "alarm_zone_"+zone.id,
@@ -50,55 +50,51 @@ function autodiscovery (zonesToConfig, reset){
 
     var configIAlarm = function(){
         var m = {};
-        m.topic = config.autodiscovery.topic.alarmConfig;
+        m.topic = config.hadiscovery.topics.alarmConfig;
             if(reset){
             m.payload = "";
         }else{
             m.payload = {
                         name                : "iAlarm", 
-                        availability_topic  : config.topic.availability,
-                        state_topic         : config.topic.alarmStatus, 
-                        command_topic       : config.topic.alarmSet,
+                        availability_topic  : config.topics.availability,
+                        state_topic         : config.topics.alarmStatus, 
+                        command_topic       : config.topics.alarmSet,
                         unique_id           : "ialarm_mqtt",
-                        code                : config.autodiscovery.code,
+                        code                : config.hadiscovery.code,
                         device: deviceConfig
                         };
         }
         return m;
     }
 
+    this.createMessages = function(){
 
-    var messages = [];
-    var zoneSize = 40;
-    if(!reset){
-        zoneSize = zonesToConfig.length;
-    }
-    for (var i = 0; i <zoneSize; i++) {
-        
-        if(i>=config.server.zones){
-            break;
+        var messages = [];
+        var zoneSize = 40;
+        if(!reset){
+            zoneSize = zonesToConfig.length;
+        }
+        for (var i = 0; i <zoneSize; i++) {
+            
+            if(i>=config.server.zones){
+                break;
+            }
+
+            var zone;
+            if(reset){
+                zone = {id : i+1};
+            }else{
+                zone = zonesToConfig[i];
+            }
+            //config per ogni zona che serve per l'hadiscovery e stato 
+            messages.push(configSensor(zone, i));
         }
 
-        var zone;
-        if(reset){
-            zone = {id : i+1};
-        }else{
-            zone = zonesToConfig[i];
-        }
-        //config per ogni zona che serve per l'autodiscovery e stato 
-        messages.push(configSensor(zone, i));
-    }
 
-
-    //config e stato antifurto
-    messages.push(configIAlarm());
-
-    this.publishConfigs = function(){
-        
-        for (var i = 0; i <messages.length; i++) {
-            var m = messages[i];
-            //TODO publish mqtt
-        }
+        //config e stato antifurto
+        messages.push(configIAlarm());
+        return messages;
     }
 }
 
+module.exports = iAlarmHaDiscovery;

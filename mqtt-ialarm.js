@@ -56,6 +56,9 @@ function initZoneCache(){
         console.log(info);
         globalContext.zonesCache.zones = zones;
         globalContext.zonesCache.caching = false;
+
+        //home assistant mqtt discovery
+        publisher.publishHomeAssistantMqttDiscovery(Object.values(globalContext.zonesCache.zones));
     });
 
     alarm.on('zoneInfo', function (zoneInfo) {
@@ -156,9 +159,6 @@ function readEvents(){
                     publisher.publishEvent(lastEvent);
                 }
             }
-            
-            //console.log("events: "+JSON.stringify(events));
-            //node.send({payload: events});
         });
 
         alarm.getEvents();

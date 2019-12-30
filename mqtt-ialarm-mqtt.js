@@ -1,14 +1,17 @@
 const config = require('./mqtt-ialarm-config');
+const iAlarmHaDiscovery = require('./mqtt-ialarm-hadiscovery');
 const mqtt = require('mqtt');
 
 function ialarmPublisher(){
     var client  = undefined;
-    var disabled = true; //TODO
 
-    var _publish = function(topic, data){
-      if(client && !disabled){
+    var _publish = function(topic, data, options){
+      if(client){
         console.log("sending topic: ", topic, data); 
-        client.publish(topic, data);
+        if(typeof data !== "string"){
+          data = JSON.stringify(data);
+        }
+        client.publish(topic, data, options);
       }else{
         console.log(topic+ " - error publishing...not connected");
       }
@@ -88,6 +91,14 @@ function ialarmPublisher(){
         _publish(m.topic, m.payload);
     }
 
+    this.publishHomeAssistantMqttDiscovery = function(zones, reset){
+      //mqtt discovery messages to publish
+      var messages = new iAlarmHaDiscovery(zones, reset).createMessages();
+      for (let index = 0; index < messages.length; index++) {
+        const m = messages[index];
+        _publish(m.topic, m.payload, {retain: true});
+      }
+    }
 
 }
 
