@@ -1,6 +1,6 @@
 {
   "name": "ialarm-mqtt",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "ialarm to mqtt bridge",
   "repository": {
     "type": "git",
@@ -9,7 +9,7 @@
   "dependencies": {
     "ialarm": "0.0.10",
     "mqtt": "^3.0.0"
-  },  
+  },
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
