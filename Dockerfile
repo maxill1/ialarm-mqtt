@@ -16,4 +16,4 @@ RUN npm install
 COPY . /usr/src/app
 
 EXPOSE 3000
-CMD [ "node", "mqtt-ialarm", "-c", "/config" ]
+CMD [ "bin/ialarm-mqtt", "-c", "/config" ]

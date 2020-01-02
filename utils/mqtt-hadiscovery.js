@@ -1,8 +1,7 @@
 
-const config = require('./mqtt-ialarm-config');
-var pjson = require('./package.json');
+var pjson = require('../package.json');
 
-function iAlarmHaDiscovery (zonesToConfig, reset){
+module.exports = function (config, zonesToConfig, reset){
 
     var deviceConfig = {"manufacturer": "Antifurto365",
                     "identifiers": "ialarm",
@@ -10,7 +9,6 @@ function iAlarmHaDiscovery (zonesToConfig, reset){
                     "name": "IAlarm", 
                     "sw_version": pjson.version  
                 };
-
 
     var configSensor = function(zone, i){
         var m = {};
@@ -96,5 +94,3 @@ function iAlarmHaDiscovery (zonesToConfig, reset){
         return messages;
     }
 }
-
-module.exports = iAlarmHaDiscovery;
