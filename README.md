@@ -1,6 +1,9 @@
 # ialarm-mqtt
 A mqtt bridge to iAlarm (https://www.antifurtocasa365.it/) and other chinese 'TCP IP' alarm system like Meian and Emooluxr (via node-ialarm library). 
 
+<a href="https://www.buymeacoffee.com/maxill1" target="_blank">
+<img src="https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg" alt="Buy Me A Coffee"></a>
+
 ## features:
 * arm home
 * arm away
