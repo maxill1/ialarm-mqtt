@@ -7,7 +7,7 @@ function ialarmPublisher(){
 
     var _publish = function(topic, data, options){
       if(client){
-        console.log("sending topic: ", topic, data); 
+        console.log("sending topic '"+topic+"' : "+JSON.stringify(data));
         if(typeof data !== "string"){
           data = JSON.stringify(data);
         }
@@ -41,9 +41,15 @@ function ialarmPublisher(){
        });
        
        client.on('message', function (topic, message) {
- 
+         console.log("received topic '"+topic+"' : ", message);
          if(topic === config.topics.alarmSet){
-          var commandType =  message.toString();
+          var commandType = config.alarmSetValues[message];
+          if(!commandType){
+            commandType = message.toString();
+            console.debug("Using MQTT message as command: " +commandType); 
+          }
+          
+          console.log("Alarm set command: " +commandType + " ("+message+")"); 
           if(alarmSetCallback){
             alarmSetCallback(commandType);
           }

@@ -6,7 +6,7 @@ const publisher = new (require('./mqtt-ialarm-publisher'));
 var globalContext = {};
 
 function newIAlarm(){
-    console.log("Creating new iAlarm connection")
+    console.debug("Creating new iAlarm connection")
     return new iAlarm(config.server.host, config.server.port,
                         config.server.username, config.server.password,
                         config.server.zones);
@@ -88,7 +88,7 @@ function readStatus(){
         });
 
         alarm.on("status", function (status) {
-            //console.log("status: "+JSON.stringify(status));
+            //console.debug("status: "+JSON.stringify(status));
 
             //add zone names
             if(status.zones){
@@ -113,7 +113,7 @@ function readStatus(){
         if(config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)){
             console.log("loading "+serverconfig.server.zones+" zones cache...");
         }else{
-            console.log("querying");
+            console.log("checking iAlarm status...");
             alarm.getStatus();
         }
 
@@ -172,7 +172,7 @@ function commandHandler(commandType){
 
     var commandName = config.alarmStatus[commandType];
     if(!commandName){
-      console.error("Received invalida alarm command: "+commandType);
+      console.error("Received invalid alarm command: "+commandType);
       return;
     }
 

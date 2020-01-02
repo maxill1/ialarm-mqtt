@@ -1,11 +1,26 @@
 {
     "alarmStatus" : {
         "ARMED_AWAY": "armAway",
+        "armed_away": "armAway",
         "ARM_AWAY"  : "armAway",
+        "arm_away"  : "armAway",    
         "ARMED_HOME": "armHome",
+        "armed_home": "armHome",        
         "ARM_HOME"  : "armHome",
+        "arm_home"  : "armHome",        
         "DISARMED"  : "disarm",
+        "disarmed"  : "disarm",
         "DISARM"    : "disarm",
+        "disarm"    : "disarm",        
+        "CANCEL"    : "cancel",
+        "cancel"    : "cancel",        
+        "TRIGGERED" : "trigger",
+        "triggered" : "trigger"        
+    },
+    "alarmSetValues" : {
+        "ARMED_AWAY": "armed_away",
+        "ARMED_HOME": "armed_home",
+        "DISARMED"  : "disarmed",
         "CANCEL"    : "cancel",
         "TRIGGERED" : "trigger"
     },
