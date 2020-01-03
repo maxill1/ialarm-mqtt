@@ -19,11 +19,13 @@ module.exports = function (config, zonesToConfig, reset){
         }else{
             //TODO decode types
             var icon = config.hadiscovery.zones.default.icon;
+            var device_class = config.hadiscovery.zones.default.device_class;
             if(zone.type){
                 var type = zone.type.toLowerCase();
                 if(config.hadiscovery.zones[type]
                     && config.hadiscovery.zones[type].icon){
                     icon = config.hadiscovery.zones[type].icon;
+                    device_class = config.hadiscovery.zones[type].device_class;
                 }
             }
             
@@ -33,14 +35,28 @@ module.exports = function (config, zonesToConfig, reset){
             }
 
             //TODO trasformare in binary sensors https://www.home-assistant.io/integrations/binary_sensor/
-            m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
+            /*m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
                         //device_class: "None",
                         availability_topic : config.topics.availability,
-                        state_topic        : "homeassistant/sensor/ialarm/state", 
+                        state_topic        : sensorState, 
                         value_template     : "{{ value_json["+i+"].message}}",
                         unique_id          : "alarm_zone_"+zone.id,
                         icon               : icon,
                         device             : deviceConfig
+            };*/
+            m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
+                        //device_class: "None",
+                        availability_topic    : config.topics.availability,
+                        state_topic           : config.topics.sensorSingleState.replace("${zoneId}", zone.id), 
+                        payload_on            : config.values.sensorOn,
+                        payload_off            : config.values.sensorOff,
+                        //json_attributes_topic : config.topics.sensorSingleAttrs.replace("${zoneId}", zone.id), 
+                        json_attributes_topic : config.topics.sensorState, 
+                        json_attributes_template:  "{{ value_json["+i+"] | tojson }}",
+                        unique_id             : "alarm_zone_"+zone.id,
+                        device_class          : device_class,
+                        //icon                  : icon,
+                        device                : deviceConfig
             };
         }
         return m;
@@ -92,7 +108,6 @@ module.exports = function (config, zonesToConfig, reset){
             //config per ogni zona che serve per l'hadiscovery e stato 
             messages.push(configSensor(zone, i));
         }
-
 
         //config e stato antifurto
         messages.push(configIAlarm());

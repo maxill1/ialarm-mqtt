@@ -22,7 +22,11 @@
         "alarmCommand" : "homeassistant/alarm_control_panel/ialarm/set",
         "error" : "homeassistant/alarm_control_panel/ialarm/error",
         "event" : "homeassistant/alarm_control_panel/ialarm/event",
-        "sensorState": "homeassistant/sensor/ialarm/state"
+        "sensorState": "homeassistant/binary_sensor/ialarm/state",
+        "sensorSingleState": "homeassistant/binary_sensor/ialarm/${zoneId}",
+        "sensorSingleActive": "homeassistant/binary_sensor/ialarm/${zoneId}/active",        
+        "sensorSingleLowBattery": "homeassistant/binary_sensor/ialarm/${zoneId}/battery",
+        "sensorSingleFault": "homeassistant/binary_sensor/ialarm/${zoneId}/fault"
     },
     "values": {
         "alarmAvailable" : "online",
@@ -32,7 +36,7 @@
             "armHome" : ["armHome", "armedHome", "armed_home", "arm_home", "SA", "HomeArm" ,"StayArm", "armStay", "armedStay", "arm_stay", "armed_stay"],
             "disarm" : ["disarm", "disarmed", "D"],
             "cancel" : ["cancel", "canceled", "C"],
-            "trigger": [ "trigger",  "triggered", "T"]
+            "triggered": [ "trigger",  "triggered", "T"]
         },
         "alarmStates":{
             "armAway" : "armed_away",
@@ -47,39 +51,55 @@
             "disarm" : "D",
             "cancel" : "cancel",
             "triggered": "T"
-        }
+        },
+        "sensorOn" : "1",
+        "sensorOff" : "0"
     },
     "hadiscovery": {
         "topics" : {
             "alarmConfig" : "homeassistant/alarm_control_panel/ialarm/config",
-            "sensorConfig" : "homeassistant/sensor/ialarm/${zoneId}/config"
+            "sensorConfig" : "homeassistant/binary_sensor/ialarm/${zoneId}/config"
         },
         "code" : "1234",
         "zoneName" : "Zona",
         "zones" : {
+            "problem" : {
+                "zone bypass" : "safety",
+                "zone fault" : "problem",
+                "wireless detector low battery" : "battery",
+                "wireless detector loss" : "connectivity"
+            },
             "default" : {
-                "icon" : "mdi:walk"
+                "icon" : "mdi:walk",
+                "device_class" : "safety"
             },
             "perimetrale" : {
-                "icon" : "mdi:run-fast"
+                "icon" : "mdi:run-fast",
+                "device_class" : "motion"
             },
             "ritardata" : {
-                "icon" : "mdi:door"
+                "icon" : "mdi:door",
+                "device_class" : "door"
             },
             "interna" : {
-                "icon" : "mdi:walk"
+                "icon" : "mdi:walk",
+                "device_class" : "moving"
             },
             "emergenza" : {
-                "icon" : "mdi:alert"
+                "icon" : "mdi:alert",
+                "device_class" : "safety"
             },
             "24 ore" : {
-                "icon" : "mdi:water"
+                "icon" : "mdi:water",
+                "device_class" : "gas"
             },
             "incendio" : {
-                "icon" : "mdi:smoke-detector"
+                "icon" : "mdi:smoke-detector",
+                "device_class" : "smoke"
             },
             "chiavi" : {
-                "icon" : "mdi:key"
+                "icon" : "mdi:key",
+                "device_class" : "lock"
             }
         }
     }

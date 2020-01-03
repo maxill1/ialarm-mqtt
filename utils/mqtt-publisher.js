@@ -82,11 +82,20 @@ module.exports = function(config) {
      })
   }
 
-  this.publishStateSensor = function(zones){
-      var m = {};
-      m.topic = config.topics.sensorState;
-      m.payload = zones;
-      _publish(m.topic, m.payload);
+  this.publishStateSensor = function (zones) {
+    //full data (sensors attrs)
+    _publish(config.topics.sensorState, zones);
+
+    //single sensors
+    if (zones) {
+      for (var i = 0; i < zones.length; i++) {
+        var zone = zones[i];
+        _publish(config.topics.sensorSingleState.replace("${zoneId}", zone.id), zone.problem?config.values.sensorOn:config.values.sensorOff);
+        _publish(config.topics.sensorSingleActive.replace("${zoneId}", zone.id), zone.bypass?config.values.sensorOn:config.values.sensorOff);
+        _publish(config.topics.sensorSingleLowBattery.replace("${zoneId}", zone.id), zone.lowbat?config.values.sensorOn:config.values.sensorOff);
+        _publish(config.topics.sensorSingleFault.replace("${zoneId}", zone.id), zone.fault?config.values.sensorOn:config.values.sensorOff);
+      }
+    }
   }
 
   this.publishStateIAlarm = function(status){
