@@ -58,7 +58,8 @@
     "hadiscovery": {
         "topics" : {
             "alarmConfig" : "homeassistant/alarm_control_panel/ialarm/config",
-            "sensorConfig" : "homeassistant/binary_sensor/ialarm/${zoneId}/config"
+            "sensorConfig" : "homeassistant/binary_sensor/ialarm/${zoneId}/config",
+            "eventsConfig" : "homeassistant/sensor/ialarm/events/config"
         },
         "code" : "1234",
         "zoneName" : "Zona",
@@ -70,37 +71,33 @@
                 "wireless detector loss" : "connectivity"
             },
             "default" : {
-                "icon" : "mdi:walk",
                 "device_class" : "safety"
             },
             "perimetrale" : {
-                "icon" : "mdi:run-fast",
                 "device_class" : "motion"
             },
             "ritardata" : {
-                "icon" : "mdi:door",
                 "device_class" : "door"
             },
             "interna" : {
-                "icon" : "mdi:walk",
                 "device_class" : "moving"
             },
             "emergenza" : {
-                "icon" : "mdi:alert",
                 "device_class" : "safety"
             },
             "24 ore" : {
-                "icon" : "mdi:water",
                 "device_class" : "gas"
             },
             "incendio" : {
-                "icon" : "mdi:smoke-detector",
                 "device_class" : "smoke"
             },
             "chiavi" : {
-                "icon" : "mdi:key",
                 "device_class" : "lock"
             }
+        },
+        "events" : {
+            "name" : "iAlarm last event",
+            "icon" : "mdi:message-alert"
         }
     }
 }
