@@ -167,7 +167,7 @@ module.exports = (config) => {
                     if(ev.name){
                         description = description+ " "+ ev.name;
                     }
-                    lastEvent =  "recent events:" + ev.date + " "+ev.message+" (zone "+description +")";
+                    lastEvent =  ev.date + " "+ev.message+" (zone "+description +")";
                     //publish only if changed or empty
                     if(lastEvent && (!globalContext.lastEventCache || lastEvent!==globalContext.lastEventCache)){
                         globalContext.lastEventCache = lastEvent;

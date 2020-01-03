@@ -22,8 +22,7 @@ module.exports = function (config, zonesToConfig, reset){
             var device_class = config.hadiscovery.zones.default.device_class;
             if(zone.type){
                 var type = zone.type.toLowerCase();
-                if(config.hadiscovery.zones[type]
-                    && config.hadiscovery.zones[type].icon){
+                if(config.hadiscovery.zones[type]){
                     icon = config.hadiscovery.zones[type].icon;
                     device_class = config.hadiscovery.zones[type].device_class;
                 }
@@ -33,30 +32,37 @@ module.exports = function (config, zonesToConfig, reset){
             if(!zoneName){
                 zoneName = "Zone";
             }
-
-            //TODO trasformare in binary sensors https://www.home-assistant.io/integrations/binary_sensor/
-            /*m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
-                        //device_class: "None",
-                        availability_topic : config.topics.availability,
-                        state_topic        : sensorState, 
-                        value_template     : "{{ value_json["+i+"].message}}",
-                        unique_id          : "alarm_zone_"+zone.id,
-                        icon               : icon,
-                        device             : deviceConfig
-            };*/
             m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
-                        //device_class: "None",
                         availability_topic    : config.topics.availability,
                         state_topic           : config.topics.sensorSingleState.replace("${zoneId}", zone.id), 
                         payload_on            : config.values.sensorOn,
                         payload_off            : config.values.sensorOff,
-                        //json_attributes_topic : config.topics.sensorSingleAttrs.replace("${zoneId}", zone.id), 
                         json_attributes_topic : config.topics.sensorState, 
                         json_attributes_template:  "{{ value_json["+i+"] | tojson }}",
                         unique_id             : "alarm_zone_"+zone.id,
                         device_class          : device_class,
-                        //icon                  : icon,
                         device                : deviceConfig
+            };
+            if(icon){
+                m.payload.icon = icon;
+            }
+        }
+        return m;
+    }
+
+    var configSensorEvents = function(){
+        var m = {};
+        m.topic = config.hadiscovery.topics.eventsConfig;
+        
+        if(reset){
+            m.payload = "";
+        }else{
+            m.payload = {name: config.hadiscovery.events.name?config.hadiscovery.events.name:"iAlarm last event", 
+                        availability_topic : config.topics.availability,
+                        state_topic        : config.topics.event, 
+                        unique_id          : "ialarm_events",
+                        icon               : config.hadiscovery.events.icon,
+                        device             : deviceConfig
             };
         }
         return m;
@@ -105,12 +111,14 @@ module.exports = function (config, zonesToConfig, reset){
             }else{
                 zone = zonesToConfig[i];
             }
-            //config per ogni zona che serve per l'hadiscovery e stato 
+            //binary sensors
             messages.push(configSensor(zone, i));
         }
 
-        //config e stato antifurto
+        //alarm state
         messages.push(configIAlarm());
+        //last event
+        messages.push(configSensorEvents());
         return messages;
     }
 }
