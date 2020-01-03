@@ -1,29 +1,4 @@
 {
-    "alarmStatus" : {
-        "ARMED_AWAY": "armAway",
-        "armed_away": "armAway",
-        "ARM_AWAY"  : "armAway",
-        "arm_away"  : "armAway",    
-        "ARMED_HOME": "armHome",
-        "armed_home": "armHome",        
-        "ARM_HOME"  : "armHome",
-        "arm_home"  : "armHome",        
-        "DISARMED"  : "disarm",
-        "disarmed"  : "disarm",
-        "DISARM"    : "disarm",
-        "disarm"    : "disarm",        
-        "CANCEL"    : "cancel",
-        "cancel"    : "cancel",        
-        "TRIGGERED" : "trigger",
-        "triggered" : "trigger"        
-    },
-    "alarmSetValues" : {
-        "ARMED_AWAY": "armed_away",
-        "ARMED_HOME": "armed_home",
-        "DISARMED"  : "disarmed",
-        "CANCEL"    : "cancel",
-        "TRIGGERED" : "trigger"
-    },
     "server" : {
         "host": "192.168.1.81",
         "port": "80",
@@ -43,11 +18,36 @@
     },
     "topics" : {
         "availability": "homeassistant/alarm_control_panel/ialarm/availability",
-        "alarmStatus" : "homeassistant/alarm_control_panel/ialarm/state",
-        "sensorStatus": "homeassistant/sensor/ialarm/state",
+        "alarmState" : "homeassistant/alarm_control_panel/ialarm/state",
+        "alarmCommand" : "homeassistant/alarm_control_panel/ialarm/set",
         "error" : "homeassistant/alarm_control_panel/ialarm/error",
         "event" : "homeassistant/alarm_control_panel/ialarm/event",
-        "alarmSet" : "homeassistant/alarm_control_panel/ialarm/set"
+        "sensorState": "homeassistant/sensor/ialarm/state"
+    },
+    "values": {
+        "alarmAvailable" : "online",
+        "alarmNotvailable" : "offline",
+        "alarmStateDecoder": {
+            "armAway" : ["armAway", "armedAway", "armed_away", "arm_away", "AA", "AwayArm"],
+            "armHome" : ["armHome", "armedHome", "armed_home", "arm_home", "SA", "HomeArm" ,"StayArm", "armStay", "armedStay", "arm_stay", "armed_stay"],
+            "disarm" : ["disarm", "disarmed", "D"],
+            "cancel" : ["cancel", "canceled", "C"],
+            "trigger": [ "trigger",  "triggered", "T"]
+        },
+        "alarmStates":{
+            "armAway" : "armed_away",
+            "armHome" : "armed_home",
+            "disarm" : "disarmed",
+            "cancel" : "cancel",
+            "triggered": "triggered"
+        },
+        "alarmStatesHomebridge":{
+            "armAway" : "AA",
+            "armHome" : "SA",
+            "disarm" : "D",
+            "cancel" : "cancel",
+            "triggered": "T"
+        }
     },
     "hadiscovery": {
         "topics" : {

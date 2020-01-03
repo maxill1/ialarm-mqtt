@@ -179,33 +179,38 @@ module.exports = (config) => {
 
     function commandHandler(commandType){
 
-        var commandName = config.alarmStatus[commandType];
-        if(!commandName){
-        console.error("Received invalid alarm command: "+commandType);
-        return;
+        if(!commandType){
+            console.error("Received invalid alarm command: "+commandType);
+            return;
         }
 
         console.log("Received alarm command: "+commandType)
         const alarm = newIAlarm();
         alarm.on("command", function (status) {
-        console.log("new alarm status: "+status.status);
-        //notify status and last event
-        publisher.publishStateSensor(status.zones);
-        publisher.publishStateIAlarm(status.status);
+            console.log("new alarm status: "+status.status);
+            //notify status and last event
+            publisher.publishStateSensor(status.zones);
+            publisher.publishStateIAlarm(status.status);
 
-        setTimeout(function(){
-            //readStatus();
-            readEvents();
-        }, 500);
+            setTimeout(function(){
+                //readStatus();
+                readEvents();
+            }, 500);
         });
         alarm.on("response", function (response) {
         //console.log("Responded: "+response);
         });
         alarm.on("error", function (err) {
-        console.error(err);
+            console.error(err);
         });
 
-        alarm[commandName]();
+        if(config.debug){
+           console.log("DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm."+ commandType + "()");
+           console.log("DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm."+ commandType + "()");
+           publisher.publishStateIAlarm(commandType);
+           return;
+        }
+        alarm[commandType]();
     }
 
 
