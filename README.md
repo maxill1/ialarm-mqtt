@@ -22,9 +22,13 @@ Optionally you can edit "hadiscovery" and topic structure (pincode, zone name pr
         "availability": "homeassistant/alarm_control_panel/ialarm/availability", //Last will topic for online/offline
         "alarmState" : "homeassistant/alarm_control_panel/ialarm/state", //current alarm status
         "alarmCommand" : "homeassistant/alarm_control_panel/ialarm/set", //alarm set command
-        "sensorState": "homeassistant/sensor/ialarm/state", //sensors states
         "error" : "homeassistant/alarm_control_panel/ialarm/error", //errors
         "event" : "homeassistant/alarm_control_panel/ialarm/event" //last event string as recorded in the alarm log
+        "sensorState": "homeassistant/binary_sensor/ialarm/state", //all zones sensor states
+        "sensorSingleState": "homeassistant/binary_sensor/ialarm/${zoneId}", //single zone sensor for movement/alert detection (on or off)
+        "sensorSingleActive": "homeassistant/binary_sensor/ialarm/${zoneId}/active", //single zone sensor representing the active (on) or bypass (off) state
+        "sensorSingleLowBattery": "homeassistant/binary_sensor/ialarm/${zoneId}/battery",  //single zone sensor for low battery detection (on)
+        "sensorSingleFault": "homeassistant/binary_sensor/ialarm/${zoneId}/fault"  //single zone sensor for fault detection (on)
     }
 ```
 
@@ -50,7 +54,9 @@ Example with home assistant default payloads
             "disarm" : "disarmed",
             "cancel" : "cancel",
             "triggered": "triggered"
-        }
+        },
+        "sensorOn" : "1", //binary sensor on value
+        "sensorOff" : "0" //binary sensor off value
     },
 
 ```
