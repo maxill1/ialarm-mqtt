@@ -105,9 +105,15 @@ module.exports = (config) => {
                         var zone = status.zones[i];
                         var zoneCache = getZoneCache(zone.id);
                         if(zoneCache){
-                        zone.name = zoneCache.name;
-                        zone.type = zoneCache.type;
+                            zone.name = zoneCache.name;
+                            zone.type = zoneCache.type;
                         }
+                        //state decode
+                        zone.problem = zone.message && zone.message !== 'OK';
+                        zone.detected = zone.message && zone.message === 'zone alarm';
+                        zone.bypass = zone.message && zone.message === 'zone bypass';
+                        zone.lowbat = zone.message && zone.message === 'wireless detector low battery' || zone.message && zone.message === 'wireless detector loss';
+                        zone.fault = zone.message && zone.message === 'zone fault';                        
                     }
                 }
                 //output
