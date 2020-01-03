@@ -42,7 +42,10 @@ module.exports = function(config) {
      client.on('message', function (topic, message) {
        console.log("received topic '"+topic+"' : ", message);
        if(topic === config.topics.alarmSet){
-        var commandType = config.alarmSetValues[message];
+        var commandType;
+        if(config.alarmSetValues && config.alarmSetValues[message]){
+          commandType = config.alarmSetValues[message];
+        }
         if(!commandType){
           commandType = message.toString();
           console.debug("Using MQTT message as command: " +commandType); 
