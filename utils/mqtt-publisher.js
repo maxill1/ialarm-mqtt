@@ -4,6 +4,30 @@ module.exports = function(config) {
 
   var client  = undefined;
 
+  var _decodeStatus = function(status){
+    var values = config.values.alarmStateDecoder;
+    if(values){
+      for (const key in values) {
+        if (values.hasOwnProperty(key)) {
+          const item = values[key];
+          if(Array.isArray(item)){
+            for (let index = 0; index < item.length; index++) {
+              const element = item[index];
+              if(element.toLowerCase() === status.toLowerCase()){
+                return key;
+              }
+            }
+          }else{
+            if(item.toLowerCase() === status.toLowerCase()){
+              return key;
+            }
+          }
+        }
+      }
+    }
+    return status;
+  }
+
   var _publish = function(topic, data, options){
     if(client){
       console.log("sending topic '"+topic+"' : "+JSON.stringify(data));
@@ -16,7 +40,7 @@ module.exports = function(config) {
     }
   }
 
-  this.connectAndSubscribe = function(alarmSetCallback){
+  this.connectAndSubscribe = function(alarmCommandCallback){
     console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
     client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
       username: config.mqtt.username, 
@@ -26,34 +50,27 @@ module.exports = function(config) {
      
      client.on('connect', function () {
 
-       client.subscribe(config.topics.alarmSet, function (err) {
+       client.subscribe(config.topics.alarmCommand, function (err) {
          if (err) {
            console.log("Error subscribing" + err.toString())
          }
        });
 
-       /*client.subscribe('homeassistant/alarm_control_panel/ialarm/config', function (err) {
-         if (!err) {
-           client.publish('presence', 'Hello mqtt')
-         }
-       })*/
      });
      
      client.on('message', function (topic, message) {
-       console.log("received topic '"+topic+"' : ", message);
-       if(topic === config.topics.alarmSet){
-        var commandType;
-        if(config.alarmSetValues && config.alarmSetValues[message]){
-          commandType = config.alarmSetValues[message];
-        }
-        if(!commandType){
-          commandType = message.toString();
-          console.debug("Using MQTT message as command: " +commandType); 
-        }
-        
-        console.log("Alarm set command: " +commandType + " ("+message+")"); 
-        if(alarmSetCallback){
-          alarmSetCallback(commandType);
+      var command;
+       try {
+         command = message.toString();
+       } catch (error) {
+         command = message;
+       }
+       console.log("received topic '"+topic+"' : ", command);
+       if(topic === config.topics.alarmCommand){
+        var ialarmCommand = _decodeStatus(command);
+        console.log("Alarm command: " +ialarmCommand + " ("+command+")"); 
+        if(alarmCommandCallback){
+          alarmCommandCallback(ialarmCommand);
         }
        }
      })
@@ -67,15 +84,17 @@ module.exports = function(config) {
 
   this.publishStateSensor = function(zones){
       var m = {};
-      m.topic = config.topics.sensorStatus;
+      m.topic = config.topics.sensorState;
       m.payload = zones;
       _publish(m.topic, m.payload);
   }
 
   this.publishStateIAlarm = function(status){
       var m = {};
-      m.topic = config.topics.alarmStatus;
-      m.payload = status.toLowerCase();
+      m.topic = config.topics.alarmState;
+      //decode status
+      var alarmState = _decodeStatus(status);
+      m.payload = (config.values.alarmStates && config.values.alarmStates[alarmState]) || status;
       _publish(m.topic, m.payload);
   }
 

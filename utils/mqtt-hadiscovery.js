@@ -36,11 +36,11 @@ module.exports = function (config, zonesToConfig, reset){
             m.payload = {name: zoneName+" "+zone.id +' '+ zone.name, 
                         //device_class: "None",
                         availability_topic : config.topics.availability,
-                        state_topic: "homeassistant/sensor/ialarm/state", 
-                        value_template: "{{ value_json["+i+"].message}}",
-                        unique_id : "alarm_zone_"+zone.id,
-                        icon : icon,
-                        device: deviceConfig
+                        state_topic        : "homeassistant/sensor/ialarm/state", 
+                        value_template     : "{{ value_json["+i+"].message}}",
+                        unique_id          : "alarm_zone_"+zone.id,
+                        icon               : icon,
+                        device             : deviceConfig
             };
         }
         return m;
@@ -53,13 +53,18 @@ module.exports = function (config, zonesToConfig, reset){
             m.payload = "";
         }else{
             m.payload = {
-                        name                : "iAlarm", 
-                        availability_topic  : config.topics.availability,
-                        state_topic         : config.topics.alarmStatus, 
-                        command_topic       : config.topics.alarmSet,
-                        unique_id           : "ialarm_mqtt",
-                        code                : config.hadiscovery.code,
-                        device: deviceConfig
+                        name                  : "iAlarm", 
+                        unique_id             : "ialarm_mqtt",
+                        device                : deviceConfig,
+                        availability_topic    : config.topics.availability,
+                        state_topic           : config.topics.alarmState, 
+                        command_topic         : config.topics.alarmCommand,
+                        code                  : config.hadiscovery.code,
+                        payload_disarm        : config.values.alarmStates.disarm,
+                        payload_arm_home      : config.values.alarmStates.armHome,
+                        payload_arm_away      : config.values.alarmStates.armAway,
+                        payload_available     : config.values.alarmAvailable,
+                        payload_not_available : config.values.alarmNotvailable
                         };
         }
         return m;
