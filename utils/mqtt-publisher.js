@@ -28,9 +28,24 @@ module.exports = function(config) {
     return status;
   }
 
+  var _publishAndLog = function(topic, data, options){
+    var dataLog;
+    if(data){
+      if(config.verbose){
+        dataLog = JSON.stringify(data);
+      }else if(typeof data === 'string'){
+        dataLog = data;
+      }else if(Array.isArray(data)){
+        dataLog = "Array of "+ data.length+ " elements";
+      }else{
+        dataLog = "Object with "+ Object.keys(data).length+ " keys";
+      }
+    }
+    console.log("sending topic '"+topic+"' : "+dataLog);
+    _publish(topic, data, options);
+  }
   var _publish = function(topic, data, options){
     if(client){
-      console.log("sending topic '"+topic+"' : "+JSON.stringify(data));
       if(typeof data !== "string"){
         data = JSON.stringify(data);
       }
@@ -84,16 +99,26 @@ module.exports = function(config) {
 
   this.publishStateSensor = function (zones) {
     //full data (sensors attrs)
-    _publish(config.topics.sensorState, zones);
+    _publishAndLog(config.topics.sensorState, zones);
 
     //single sensors
-    if (zones) {
+    if (zones && zones.length > 0) {
+
+      console.log("sending topic '"+config.topics.sensorSingleState+"' for "+zones.length + " zones");
+      console.log("sending topic '"+config.topics.sensorSingleActive+"' for "+zones.length + " zones");
+      console.log("sending topic '"+config.topics.sensorSingleLowBattery+"' for "+zones.length + " zones");
+      console.log("sending topic '"+config.topics.sensorSingleFault+"' for "+zones.length + " zones");
+
       for (var i = 0; i < zones.length; i++) {
         var zone = zones[i];
-        _publish(config.topics.sensorSingleState.replace("${zoneId}", zone.id), zone.problem?config.values.sensorOn:config.values.sensorOff);
-        _publish(config.topics.sensorSingleActive.replace("${zoneId}", zone.id), zone.bypass?config.values.sensorOn:config.values.sensorOff);
-        _publish(config.topics.sensorSingleLowBattery.replace("${zoneId}", zone.id), zone.lowbat?config.values.sensorOn:config.values.sensorOff);
-        _publish(config.topics.sensorSingleFault.replace("${zoneId}", zone.id), zone.fault?config.values.sensorOn:config.values.sensorOff);
+        var pub = _publish;
+        if(config.verbose){
+          pub = _publishAndLog;
+        }
+        pub(config.topics.sensorSingleState.replace("${zoneId}", zone.id), zone.problem?config.values.sensorOn:config.values.sensorOff);
+        pub(config.topics.sensorSingleActive.replace("${zoneId}", zone.id), zone.bypass?config.values.sensorOn:config.values.sensorOff);
+        pub(config.topics.sensorSingleLowBattery.replace("${zoneId}", zone.id), zone.lowbat?config.values.sensorOn:config.values.sensorOff);
+        pub(config.topics.sensorSingleFault.replace("${zoneId}", zone.id), zone.fault?config.values.sensorOn:config.values.sensorOff);
       }
     }
   }
@@ -104,7 +129,7 @@ module.exports = function(config) {
       //decode status
       var alarmState = _decodeStatus(status);
       m.payload = (config.values.alarmStates && config.values.alarmStates[alarmState]) || status;
-      _publish(m.topic, m.payload);
+      _publishAndLog(m.topic, m.payload);
   }
 
   this.publishAvailable = function(){
