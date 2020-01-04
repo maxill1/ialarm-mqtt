@@ -99,5 +99,5 @@ ialarm-mqtt -c /path/to/my/config
 
 ## running with docker image
 ```
-docker run --name ialarm-mqtt -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
+docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
 ```
