@@ -183,7 +183,7 @@ module.exports = (config) => {
         }
     }
 
-    function commandHandler(commandType){
+    function armDisarm(commandType){
 
         if(!commandType){
             console.error("Received invalid alarm command: "+commandType);
@@ -221,6 +221,40 @@ module.exports = (config) => {
         alarm[commandType]();
     }
 
+    function bypassZone(zoneNumber, bypass){
+
+        if(!zoneNumber || zoneNumber>40){
+            console.error("bypassZone: received invalid zone number: "+zoneNumber);
+            return;
+        }
+
+        if(!bypass){
+            bypass = false;
+        }
+
+        console.log("Received bypass "+bypass+" for zone number "+zoneNumber)
+        const alarm = newIAlarm();
+        alarm.on("command", function (status) {
+            console.log("new alarm status: "+status.status);
+            //alarm
+            publisher.publishStateIAlarm(status.status);
+            //notify last event
+            setTimeout(function(){
+                readEvents();
+            }, 500);
+            //and sensors
+            publisher.publishStateSensor(status.zones);
+        });
+        alarm.on("response", function (response) {
+        //console.log("Responded: "+response);
+        });
+        alarm.on("error", function (err) {
+            console.error(err);
+        });
+
+        alarm.bypassZone(zoneNumber, bypass);
+    }
+
 
     //start loop
     function start(){
@@ -231,6 +265,10 @@ module.exports = (config) => {
 
         //load zone names
         initZoneCache();
+
+        var commandHandler = {};
+        commandHandler.armDisarm = armDisarm;
+        commandHandler.bypassZone = bypassZone;
 
         publisher.connectAndSubscribe(commandHandler);
 
