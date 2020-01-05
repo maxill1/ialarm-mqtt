@@ -1,4 +1,5 @@
 {
+    "verbose" : false,
     "server" : {
         "host": "192.168.1.81",
         "port": "80",
@@ -17,52 +18,53 @@
         "password": "password"
     },
     "topics" : {
-        "availability": "homeassistant/alarm_control_panel/ialarm/availability",
-        "alarmState" : "homeassistant/alarm_control_panel/ialarm/state",
-        "alarmCommand" : "homeassistant/alarm_control_panel/ialarm/set",
-        "error" : "homeassistant/alarm_control_panel/ialarm/error",
-        "event" : "homeassistant/alarm_control_panel/ialarm/event",
-        "sensorState": "homeassistant/binary_sensor/ialarm/state",
-        "sensorSingleState": "homeassistant/binary_sensor/ialarm/${zoneId}",
-        "sensorSingleActive": "homeassistant/binary_sensor/ialarm/${zoneId}/active",        
-        "sensorSingleLowBattery": "homeassistant/binary_sensor/ialarm/${zoneId}/battery",
-        "sensorSingleFault": "homeassistant/binary_sensor/ialarm/${zoneId}/fault"
+        "availability": "ialarm/alarm/availability",
+        "error" : "ialarm/alarm/error",
+        "alarm" : {
+            "state" : "ialarm/alarm/state",
+            "command" : "ialarm/alarm/set",
+            "event" : "ialarm/alarm/event"
+        },
+        "sensors" : {
+            "topicType" : "state",
+            "state": "ialarm/sensors/state",
+            "zone": {
+                "alarm": "ialarm/sensors/${zoneId}/alarm",
+                "active": "ialarm/sensors/${zoneId}/active",        
+                "lowBattery": "ialarm/sensors/${zoneId}/battery",
+                "fault": "ialarm/sensors/${zoneId}/fault"
+            }
+        }
     },
-    "values": {
+    "payloads": {
         "alarmAvailable" : "online",
         "alarmNotvailable" : "offline",
-        "alarmStateDecoder": {
+        "alarmDecoder": {
             "armAway" : ["armAway", "armedAway", "armed_away", "arm_away", "AA", "AwayArm"],
             "armHome" : ["armHome", "armedHome", "armed_home", "arm_home", "SA", "HomeArm" ,"StayArm", "armStay", "armedStay", "arm_stay", "armed_stay"],
             "disarm" : ["disarm", "disarmed", "D"],
             "cancel" : ["cancel", "canceled", "C"],
             "triggered": [ "trigger",  "triggered", "T"]
         },
-        "alarmStates":{
+        "alarm":{
             "armAway" : "armed_away",
             "armHome" : "armed_home",
             "disarm" : "disarmed",
             "cancel" : "cancel",
             "triggered": "triggered"
         },
-        "alarmStatesHomebridge":{
-            "armAway" : "AA",
-            "armHome" : "SA",
-            "disarm" : "D",
-            "cancel" : "cancel",
-            "triggered": "T"
-        },
         "sensorOn" : "1",
         "sensorOff" : "0"
     },
     "hadiscovery": {
-        "topics" : {
-            "alarmConfig" : "homeassistant/alarm_control_panel/ialarm/config",
-            "sensorConfig" : "homeassistant/binary_sensor/ialarm/${zoneId}/config",
-            "eventsConfig" : "homeassistant/sensor/ialarm/events/config"
+        "discoveryPrefix" : "homeassistant",
+        "topics": {
+            "alarmConfig": "${discoveryPrefix}/alarm_control_panel/ialarm/config",
+            "sensorConfig": "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config",
+            "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config"
         },
-        "code" : "1234",
-        "zoneName" : "Zona",
+        "code": "1504",
+        "zoneName": "Zona",
         "zones" : {
             "problem" : {
                 "zone bypass" : "safety",

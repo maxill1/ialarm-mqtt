@@ -99,6 +99,10 @@ module.exports = (config) => {
             alarm.on("status", function (status) {
                 //console.debug("status: "+JSON.stringify(status));
 
+                //alarm state
+                publisher.publishStateIAlarm(status.status);
+
+                var lastChecked = new Date();
                 //add zone names
                 if(status.zones){
                     for (var i = 0; i < status.zones.length; i++) {
@@ -110,19 +114,15 @@ module.exports = (config) => {
                         }
                         //state decode
                         zone.problem = zone.message && zone.message !== 'OK';
-                        zone.detected = zone.message && zone.message === 'zone alarm';
+                        zone.alarm = zone.message && zone.message === 'zone alarm';
                         zone.bypass = zone.message && zone.message === 'zone bypass';
                         zone.lowbat = zone.message && zone.message === 'wireless detector low battery' || zone.message && zone.message === 'wireless detector loss';
-                        zone.fault = zone.message && zone.message === 'zone fault';                        
+                        zone.fault = zone.message && zone.message === 'zone fault';     
+                        zone.lastChecked = lastChecked;                 
                     }
                 }
-                //output
-                //uno stato per tutti i sensori
+                //sensor states
                 publisher.publishStateSensor(status.zones);
-
-                // stato antifurto
-                publisher.publishStateIAlarm(status.status);
-
             });
 
             if(config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)){
@@ -194,14 +194,16 @@ module.exports = (config) => {
         const alarm = newIAlarm();
         alarm.on("command", function (status) {
             console.log("new alarm status: "+status.status);
-            //notify status and last event
-            publisher.publishStateSensor(status.zones);
+            //alarm
             publisher.publishStateIAlarm(status.status);
-
+            //notify last event
             setTimeout(function(){
-                //readStatus();
                 readEvents();
             }, 500);
+            //and sensors
+            publisher.publishStateSensor(status.zones);
+            
+ 
         });
         alarm.on("response", function (response) {
         //console.log("Responded: "+response);
