@@ -19,28 +19,36 @@ Optionally you can edit "hadiscovery" and topic structure (pincode, zone name pr
 ### topics
 ```
     "topics" : {
-        "availability": "homeassistant/alarm_control_panel/ialarm/availability", //Last will topic for online/offline
-        "alarmState" : "homeassistant/alarm_control_panel/ialarm/state", //current alarm status
-        "alarmCommand" : "homeassistant/alarm_control_panel/ialarm/set", //alarm set command
-        "error" : "homeassistant/alarm_control_panel/ialarm/error", //errors
-        "event" : "homeassistant/alarm_control_panel/ialarm/event" //last event string as recorded in the alarm log
-        "sensorState": "homeassistant/binary_sensor/ialarm/state", //all zones sensor states
-        "sensorSingleState": "homeassistant/binary_sensor/ialarm/${zoneId}", //single zone sensor for movement/alert detection (on or off)
-        "sensorSingleActive": "homeassistant/binary_sensor/ialarm/${zoneId}/active", //single zone sensor representing the active (on) or bypass (off) state
-        "sensorSingleLowBattery": "homeassistant/binary_sensor/ialarm/${zoneId}/battery",  //single zone sensor for low battery detection (on)
-        "sensorSingleFault": "homeassistant/binary_sensor/ialarm/${zoneId}/fault"  //single zone sensor for fault detection (on)
+        "availability": "ialarm/alarm/availability", //Last will topic for online/offline
+        "error" : "ialarm/alarm/error", //errors
+        "alarm" : {
+            "state" : "ialarm/alarm/state", //current alarm status
+            "command" : "ialarm/alarm/set", //alarm set command
+            "event" : "ialarm/alarm/event" //last event string as recorded in the alarm log
+        },
+        "sensors" : {
+            "topicType" : "state", //'state' for publishing only "state" topic, 'zone' for publishing only "zone" topics (alarm, active, lowBattery and fault), '' (or undefined) for both types 
+            "state": "ialarm/sensors/state", //array containing all zones data in one payload
+            "zone": {
+                "alarm": "ialarm/sensors/${zoneId}/alarm", //single zone sensor for movement/alert detection (on or off)
+                "active": "ialarm/sensors/${zoneId}/active", //single zone sensor representing the active (on) or bypass (off) state
+                "lowBattery": "ialarm/sensors/${zoneId}/battery", //single zone sensor for low battery detection (on)
+                "fault": "ialarm/sensors/${zoneId}/fault" //single zone sensor for fault detection (on)
+            }
+        }
     }
+
 ```
 
 ### payloads
 
 Example with home assistant default payloads
 ```	
-    "values": {
+    "payloads": {
         "alarmAvailable" : "online", 
         "alarmNotvailable" : "offline",
 		//decode alarmCommand received state (accepting multiple payloads)
-        "alarmStateDecoder": {
+        "alarmDecoder": {
             "armAway" : ["armAway", "armedAway", "armed_away", "arm_away", "AA", "AwayArm"],
             "armHome" : ["armHome", "armedHome", "armed_home", "arm_home", "SA", "HomeArm" ,"StayArm", "armStay", "armedStay", "arm_stay", "armed_stay"],
             "disarm" : ["disarm", "disarmed", "D"],
@@ -48,7 +56,7 @@ Example with home assistant default payloads
             "trigger": [ "trigger",  "triggered", "T"]
         },
 		//published payload in "alarmState" command (accepting multiple payloads)
-        "alarmStates":{
+        "alarm":{
             "armAway" : "armed_away",
             "armHome" : "armed_home",
             "disarm" : "disarmed",
@@ -63,17 +71,17 @@ Example with home assistant default payloads
 
 Example with mqttthing (homebridge) default payloads
 ```	
-    "values": {
+    "payloads": {
         "alarmAvailable" : "online", 
         "alarmNotvailable" : "offline",
-        "alarmStateDecoder": {
+        "alarmDecoder": {
             "armAway" : ["AA", "AwayArm"],
             "armHome" : ["SA", "StayArm"],
             "disarm" : ["D"],
             "cancel" : ["cancel"], //not used by mqqtthing
             "trigger": ["T"]
         },
-        "alarmStatesHomebridge":{
+        "alarm":{
             "armAway" : "AA",
             "armHome" : "SA",
             "disarm" : "D",

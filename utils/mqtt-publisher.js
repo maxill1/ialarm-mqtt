@@ -5,7 +5,7 @@ module.exports = function(config) {
   var client  = undefined;
 
   var _decodeStatus = function(status){
-    var values = config.values.alarmStateDecoder;
+    var values = config.payloads.alarmDecoder;
     if(values){
       for (const key in values) {
         if (values.hasOwnProperty(key)) {
@@ -65,7 +65,7 @@ module.exports = function(config) {
      
      client.on('connect', function () {
 
-       client.subscribe(config.topics.alarmCommand, function (err) {
+       client.subscribe(config.topics.alarm.command, function (err) {
          if (err) {
            console.log("Error subscribing" + err.toString())
          }
@@ -81,7 +81,7 @@ module.exports = function(config) {
          command = message;
        }
        console.log("received topic '"+topic+"' : ", command);
-       if(topic === config.topics.alarmCommand){
+       if(topic === config.topics.alarm.command){
         var ialarmCommand = _decodeStatus(command);
         console.log("Alarm command: " +ialarmCommand + " ("+command+")"); 
         if(alarmCommandCallback){
@@ -98,37 +98,47 @@ module.exports = function(config) {
   }
 
   this.publishStateSensor = function (zones) {
-    //full data (sensors attrs)
-    _publishAndLog(config.topics.sensorState, zones);
 
-    //single sensors
-    if (zones && zones.length > 0) {
+    if(!config.topics.sensors){
+      //don't publish sensors
+      console.log("config.json has no 'config.topics.sensors' configured. Skipping.");
+      return;
+    }
 
-      console.log("sending topic '"+config.topics.sensorSingleState+"' for "+zones.length + " zones");
-      console.log("sending topic '"+config.topics.sensorSingleActive+"' for "+zones.length + " zones");
-      console.log("sending topic '"+config.topics.sensorSingleLowBattery+"' for "+zones.length + " zones");
-      console.log("sending topic '"+config.topics.sensorSingleFault+"' for "+zones.length + " zones");
+    var configuredZones = config.server.zones || zones.length || 40;
 
-      for (var i = 0; i < zones.length; i++) {
+    //one payload with all sensors data (sensors attrs)
+    if(!config.topics.sensors.topicType || config.topics.sensors.topicType === 'state'){
+      _publishAndLog(config.topics.sensors.state, zones.slice(0, configuredZones));
+    }
+    //multiple payload with single sensor data
+    if (zones && zones.length > 0 && (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'zone')) {
+
+      console.log("sending topic '"+config.topics.sensors.zone.alarm+"' for "+configuredZones + " zones");
+      console.log("sending topic '"+config.topics.sensors.zone.active+"' for "+configuredZones + " zones");
+      console.log("sending topic '"+config.topics.sensors.zone.lowBattery+"' for "+configuredZones + " zones");
+      console.log("sending topic '"+config.topics.sensors.zone.fault+"' for "+configuredZones + " zones");
+
+      for (var i = 0; i < configuredZones; i++) {
         var zone = zones[i];
         var pub = _publish;
         if(config.verbose){
           pub = _publishAndLog;
         }
-        pub(config.topics.sensorSingleState.replace("${zoneId}", zone.id), zone.problem?config.values.sensorOn:config.values.sensorOff);
-        pub(config.topics.sensorSingleActive.replace("${zoneId}", zone.id), zone.bypass?config.values.sensorOn:config.values.sensorOff);
-        pub(config.topics.sensorSingleLowBattery.replace("${zoneId}", zone.id), zone.lowbat?config.values.sensorOn:config.values.sensorOff);
-        pub(config.topics.sensorSingleFault.replace("${zoneId}", zone.id), zone.fault?config.values.sensorOn:config.values.sensorOff);
+        pub(config.topics.sensors.zone.alarm.replace("${zoneId}", zone.id), zone.alarm?config.payloads.sensorOn:config.payloads.sensorOff);
+        pub(config.topics.sensors.zone.active.replace("${zoneId}", zone.id), zone.bypass?config.payloads.sensorOn:config.payloads.sensorOff);
+        pub(config.topics.sensors.zone.lowBattery.replace("${zoneId}", zone.id), zone.lowbat?config.payloads.sensorOn:config.payloads.sensorOff);
+        pub(config.topics.sensors.zone.fault.replace("${zoneId}", zone.id), zone.fault?config.payloads.sensorOn:config.payloads.sensorOff);
       }
     }
   }
 
   this.publishStateIAlarm = function(status){
       var m = {};
-      m.topic = config.topics.alarmState;
+      m.topic = config.topics.alarm.state;
       //decode status
       var alarmState = _decodeStatus(status);
-      m.payload = (config.values.alarmStates && config.values.alarmStates[alarmState]) || status;
+      m.payload = (config.payloads.alarm && config.payloads.alarm[alarmState]) || status;
       _publishAndLog(m.topic, m.payload);
   }
 
@@ -148,7 +158,7 @@ module.exports = function(config) {
 
   this.publishEvent = function(data){
       var m = {};
-      m.topic = config.topics.event;
+      m.topic = config.topics.alarm.event;
       m.payload = data;
       _publish(m.topic, m.payload);
   }
@@ -159,7 +169,8 @@ module.exports = function(config) {
     var messages = new iAlarmHaDiscovery(config, zones, reset).createMessages();
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index];
-      _publish(m.topic, m.payload, {retain: true});
+      _publish(m.topic, "");//reset
+      _publish(m.topic, m.payload, {retain: true});//config
     }
   }
 
