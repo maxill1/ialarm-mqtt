@@ -15,7 +15,8 @@
         "host": "192.168.1.82",
         "port": "1883",
         "username": "admin",
-        "password": "password"
+        "password": "password",
+        "clientId": "ialarm-mqtt"
     },
     "topics" : {
         "availability": "ialarm/alarm/availability",
@@ -63,7 +64,7 @@
             "sensorConfig": "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config",
             "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config"
         },
-        "code": "1504",
+        "code": "8734",
         "zoneName": "Zona",
         "zones" : {
             "problem" : {

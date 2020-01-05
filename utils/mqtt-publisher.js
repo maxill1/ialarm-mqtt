@@ -57,10 +57,12 @@ module.exports = function(config) {
 
   this.connectAndSubscribe = function(alarmCommandCallback){
 
+    var clientId = config.mqtt.clientId || "ialarm-mqtt-"+Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
     client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
       username: config.mqtt.username, 
       password: config.mqtt.password,
+      clientId : clientId,
       will: { topic: config.topics.availability, payload: 'offline' }
     })
      
