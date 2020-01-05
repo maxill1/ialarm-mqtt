@@ -56,6 +56,7 @@ module.exports = function(config) {
   }
 
   this.connectAndSubscribe = function(alarmCommandCallback){
+
     console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
     client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
       username: config.mqtt.username, 
@@ -64,13 +65,13 @@ module.exports = function(config) {
     })
      
      client.on('connect', function () {
-
-       client.subscribe(config.topics.alarm.command, function (err) {
-         if (err) {
-           console.log("Error subscribing" + err.toString())
-         }
-       });
-
+      console.log("connected..."); 
+      console.log("subscribing to "+config.topics.alarm.command); 
+      client.subscribe(config.topics.alarm.command, function(err) {
+        if (err) {
+          console.log("Error subscribing" + err.toString());
+        }
+      });
      });
      
      client.on('message', function (topic, message) {
