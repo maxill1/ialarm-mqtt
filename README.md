@@ -24,7 +24,8 @@ Optionally you can edit "hadiscovery" and topic structure (code, zone name prefi
         "alarm" : {
             "state" : "ialarm/alarm/state", //current alarm status
             "command" : "ialarm/alarm/set", //alarm set command
-            "event" : "ialarm/alarm/event" //last event string as recorded in the alarm log
+            "event" : "ialarm/alarm/event", //last event string as recorded in the alarm log,
+            "bypass": "ialarm/alarm/zone/${zoneId}/bypass" //command to bypass/restore a zone
         },
         "sensors" : {
             "topicType" : "state", //'state' for publishing only "state" topic, 'zone' for publishing only "zone" topics (alarm, active, lowBattery and fault), '' (or undefined) for both types 

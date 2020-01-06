@@ -21,8 +21,6 @@ module.exports = function (config, zonesToConfig, reset){
         const value = data[key];
         //${key}
         topic = topic.replace("${" + key + "}", value);
-        //+ wildcard
-        topic = topic.replace("+", value);
       }
       return topic;
     };

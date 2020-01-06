@@ -82,7 +82,7 @@ try {
         _checkConfig(config, ['topics', 'alarm', 'command']);
         _checkConfig(config, ['topics', 'alarm', 'state']);
         _checkConfig(config, ['topics', 'alarm', 'event']);
-        _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, "ialarm/alarm/zone/+/bypass");
+        _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, "ialarm/alarm/zone/${zoneId}/bypass");
         _checkConfig(config, ['payloads', 'alarmAvailable']);
         _checkConfig(config, ['payloads', 'alarmNotvailable']);
         _checkConfig(config, ['payloads', 'alarmDecoder']);
