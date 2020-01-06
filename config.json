@@ -25,7 +25,7 @@
             "state" : "ialarm/alarm/state",
             "command" : "ialarm/alarm/set",
             "event" : "ialarm/alarm/event",
-            "bypass": "ialarm/alarm/zone/+/bypass"
+            "bypass": "ialarm/alarm/zone/${zoneId}/bypass"
         },
         "sensors" : {
             "topicType" : "state",
@@ -103,6 +103,10 @@
         "events" : {
             "name" : "iAlarm last event",
             "icon" : "mdi:message-alert"
+        },
+        "bypass" : {
+            "name" : "Bypass",
+            "icon" : "mdi:lock-open"
         }
     }
 }

@@ -68,7 +68,7 @@ module.exports = function(config) {
      
      client.on('connect', function () {
       console.log("connected..."); 
-      var topicsToSubscribe = [config.topics.alarm.command, config.topics.alarm.bypass];
+      var topicsToSubscribe = [config.topics.alarm.command, config.topics.alarm.bypass.replace("${zoneId}", "+")];
       console.log("subscribing to "+JSON.stringify(topicsToSubscribe)); 
       client.subscribe(topicsToSubscribe, function(err) {
         if (err) {
@@ -96,7 +96,7 @@ module.exports = function(config) {
       //bypass topic
       //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
       //"ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
-      var strRegex = config.topics.alarm.bypass.replace("/", "\/").replace("+", "(\\d{1,2})");
+      var strRegex = config.topics.alarm.bypass.replace("/", "\/").replace("${zoneId}", "(\\d{1,2})"); //.replace("+", "(\\d{1,2})")
       var topicRegex = new RegExp(strRegex, "gm");
       var match = topicRegex.exec(topic);
       if(match){
