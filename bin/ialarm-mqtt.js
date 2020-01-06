@@ -3,7 +3,7 @@
 const ialarmMqtt = require('../');
 try {
 
-    var _checkConfig = function(object, paths, index) {
+    var _checkConfig = function(object, paths, index, defaultValue) {
       if (!index) {
         index = 0;
       }
@@ -11,17 +11,31 @@ try {
         return;
       }
       const key = Array.isArray(paths) ? paths[index] : paths;
-      if (object === undefined || object[key] === undefined) {
-        throw "subscribe error: " +
-          config.file +
-          " is missing '" +
-          paths[index] +
-          "' on " +
-          JSON.stringify(paths) +
-          ". See: " +
-          JSON.stringify(config.topics);
+      var exists = object !== undefined && object[key] !== undefined;
+      if (!exists) {
+        if (defaultValue && index === paths.length - 1) {
+          //create default
+          console.log(
+            "Config.json value not specified on " +
+              config.file +
+              " using default '" +
+              defaultValue +
+              "' on " +
+              JSON.stringify(paths)
+          );
+          object[key] = defaultValue;
+        } else {
+          throw "subscribe error: " +
+            config.file +
+            " is missing '" +
+            paths[index] +
+            "' on " +
+            JSON.stringify(paths) +
+            ". See: " +
+            JSON.stringify(config.topics);
+        }
       }
-      _checkConfig(object[key], paths, index + 1);
+      _checkConfig(object[key], paths, index + 1, defaultValue);
     };
 
     var parseArgs = function (key, cmdArgs) {
@@ -68,12 +82,17 @@ try {
         _checkConfig(config, ['topics', 'alarm', 'command']);
         _checkConfig(config, ['topics', 'alarm', 'state']);
         _checkConfig(config, ['topics', 'alarm', 'event']);
+        _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, "ialarm/alarm/zone/+/bypass");
         _checkConfig(config, ['payloads', 'alarmAvailable']);
         _checkConfig(config, ['payloads', 'alarmNotvailable']);
         _checkConfig(config, ['payloads', 'alarmDecoder']);
         _checkConfig(config, ['payloads', 'alarm']);
         _checkConfig(config, ['payloads', 'sensorOn']);
         _checkConfig(config, ['payloads', 'sensorOff']);
+
+        if(config.hadiscovery){
+          _checkConfig(config, ['hadiscovery', 'topics', 'bypassConfig'], 0, "${discoveryPrefix}/switch/ialarm/${zoneId}/config");
+        }
 
         ialarmMqtt(config)
     } else {
