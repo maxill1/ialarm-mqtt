@@ -102,7 +102,6 @@ module.exports = (config) => {
                 //alarm state
                 publisher.publishStateIAlarm(status.status);
 
-                var lastChecked = new Date();
                 //add zone names
                 if(status.zones){
                     for (var i = 0; i < status.zones.length; i++) {
@@ -112,13 +111,8 @@ module.exports = (config) => {
                             zone.name = zoneCache.name;
                             zone.type = zoneCache.type;
                         }
-                        //state decode
-                        zone.problem = zone.message && zone.message !== 'OK';
-                        zone.alarm = zone.message && zone.message === 'zone alarm';
-                        zone.bypass = zone.message && zone.message === 'zone bypass';
-                        zone.lowbat = zone.message && zone.message === 'wireless detector low battery' || zone.message && zone.message === 'wireless detector loss';
-                        zone.fault = zone.message && zone.message === 'zone fault';     
-                        zone.lastChecked = lastChecked;                 
+                        //problem decode for rapid use in mqtt clients
+                        zone.problem = !zone.ok;
                     }
                 }
                 //sensor states
