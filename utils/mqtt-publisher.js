@@ -77,55 +77,69 @@ module.exports = function(config) {
       });
      });
      
-     client.on('message', function (topic, message) {
-      var command;
+     client.on("message", function(topic, message) {
+       var command;
        try {
          command = message.toString();
        } catch (error) {
          command = message;
        }
-       console.log("received topic '"+topic+"' : ", command);
-       if(topic === config.topics.alarm.command){
-        var ialarmCommand = _decodeStatus(command);
-        console.log("Alarm command: " +ialarmCommand + " ("+command+")"); 
-        if(alarmCommands.command){
-          alarmCommands.command(ialarmCommand);
-        }
-      }
+       console.log("received topic '" + topic + "' : ", command);
 
-      //bypass topic
-      //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
-      //"ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
-      var strRegex = config.topics.alarm.bypass.replace("/", "\/").replace("${zoneId}", "(\\d{1,2})"); //.replace("+", "(\\d{1,2})")
-      var topicRegex = new RegExp(strRegex, "gm");
-      var match = topicRegex.exec(topic);
-      if(match){
-        var zoneNumber = match[1];
+       //arm/disarm topic
+       if (topic === config.topics.alarm.command) {
+         var ialarmCommand = _decodeStatus(command);
+         console.log("Alarm command: " + ialarmCommand + " (" + command + ")");
+         if (alarmCommands.armDisarm) {
+           alarmCommands.armDisarm(ialarmCommand);
+           console.log("Executed: " + ialarmCommand + " (" + command + ")");
+         }
+       } else {
+         //bypass topic
+         //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
+         //"ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
+         var strRegex = config.topics.alarm.bypass
+           .replace("/", "/")
+           .replace("${zoneId}", "(\\d{1,2})"); //.replace("+", "(\\d{1,2})")
+         var topicRegex = new RegExp(strRegex, "gm");
+         var match = topicRegex.exec(topic);
+         if (match) {
+           var zoneNumber = match[1];
+           console.log("Alarm bypass: zone " + zoneNumber + " (" + command + ")");
 
-        var accepted = ["1", "0", "true", "false", "on", "off"];
-        var knownCommand = false;
-        for (let index = 0; index < accepted.length; index++) {
-          const cmd = accepted[index];
-          if(cmd === command.toLowerCase()){
-            knownCommand = true;
-            break;
-          }
-        }
-        if(!knownCommand){
-          console.log("Alarm bypass zone "+zoneNumber + " ignored invalid command: "+command); 
-          return;
-        }
-        var bypass = command === "1" || command.toLowerCase() === "true" || command.toLowerCase() === "on";
-        if(bypass){
-          console.log("Alarm bypass zone "+zoneNumber); 
-        }else{
-          console.log("Alarm bypass removed from zone "+zoneNumber); 
-        }
-        if(alarmCommands.bypassZone){
-          alarmCommands.bypassZone(zoneNumber, bypass);
-        }
-      }
-     })
+           var accepted = ["1", "0", "true", "false", "on", "off"];
+           var knownCommand = false;
+           for (let index = 0; index < accepted.length; index++) {
+             const cmd = accepted[index];
+             if (cmd === command.toLowerCase()) {
+               knownCommand = true;
+               break;
+             }
+           }
+           if (!knownCommand) {
+             console.log(
+               "Alarm bypass zone " +
+                 zoneNumber +
+                 " ignored invalid command: " +
+                 command
+             );
+             return;
+           }
+           var bypass =
+             command === "1" ||
+             command.toLowerCase() === "true" ||
+             command.toLowerCase() === "on";
+           if (bypass) {
+             console.log("Alarm bypass zone " + zoneNumber);
+           } else {
+             console.log("Alarm bypass removed from zone " + zoneNumber);
+           }
+           if (alarmCommands.bypassZone) {
+             alarmCommands.bypassZone(zoneNumber, bypass);
+           }
+         }
+       }
+     });
 
      client.on('error', function (err) {
        // message is Buffer
