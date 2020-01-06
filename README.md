@@ -8,8 +8,8 @@ A mqtt bridge to iAlarm (https://www.antifurtocasa365.it/) and other chinese 'TC
 * arm home
 * arm away
 * disarm
-* zone info (alarm, bypass, fault, low battery, signal loss)
-* home assistant [mqtt-discovery](https://www.home-assistant.io/docs/mqtt/discovery/).
+* zone info (ok/problem, open, alarm, bypass, fault, low battery, signal loss) - NOTE: in order to obtain 'open' property in real time you must enable "DoorDetect" ("Ispezione sensori porta" on italian guard ip panel) in your alarm web panel options (http://192.168.1.x/Option.htm)
+* home assistant [mqtt-discovery](https://www.home-assistant.io/docs/mqtt/discovery/)
 
 ## config
 edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need. Pay attention to "server.zones" number, by default the are 40 but you may want to reduce it to match your sensor number.
@@ -93,6 +93,11 @@ Example with mqttthing (homebridge) default payloads
 
 ```
 
+## running with docker image
+```
+docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
+```
+
 ## running with nodejs
 
 ```
@@ -104,9 +109,4 @@ or
 ```
 npm install -g ialarm-mqtt 
 ialarm-mqtt -c /path/to/my/config
-```
-
-## running with docker image
-```
-docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
 ```
