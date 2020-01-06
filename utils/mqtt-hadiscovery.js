@@ -146,11 +146,7 @@ module.exports = function (config, zonesToConfig, reset){
         var zoneSize = reset?40:zonesToConfig.length || 40;
         for (var i = 0; i <zoneSize; i++) {
             
-            if(i>=config.server.zones){
-                break;
-            }
-
-            var zone;
+        var zone;
             if(reset){
                 zone = {id : i+1};
             }else{
