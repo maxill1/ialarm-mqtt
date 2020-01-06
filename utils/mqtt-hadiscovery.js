@@ -19,6 +19,7 @@ module.exports = function (config, zonesToConfig, reset){
       var topic = topicTemplate;
       for (const key in data) {
         const value = data[key];
+        //${key}
         topic = topic.replace("${" + key + "}", value);
       }
       return topic;
@@ -87,6 +88,34 @@ module.exports = function (config, zonesToConfig, reset){
       };
     };
 
+    var configSwitchBypass = function(zone, i) {
+      var zoneName = config.hadiscovery.zoneName || "Zone";
+      var bypassName = config.hadiscovery.bypass.name || "Bypass";
+      var payload = "";
+      if (!reset) {
+        payload = {
+          name: bypassName+ " " +zoneName + " " + zone.id + " " + zone.name,
+          availability_topic: config.topics.availability,
+          state_topic: config.topics.sensors.state,
+          value_template: "{{ '1' if value_json[" + i + "].bypass else '0' }}",
+          payload_on: config.payloads.sensorOn,
+          payload_off: config.payloads.sensorOff,
+          command_topic: _getTopic(config.topics.alarm.bypass, {
+            zoneId : zone.id
+          }),
+          unique_id: "alarm_bypass_zone_" + zone.id,
+          icon: config.hadiscovery.bypass.icon,
+          device: deviceConfig
+        };
+      }
+      return {
+        topic: _getTopic(config.hadiscovery.topics.bypassConfig, {
+          zoneId : zone.id
+        }),
+        payload
+      };
+    };
+
     var configIAlarm = function() {
       var payload = "";
       if (!reset) {
@@ -129,6 +158,9 @@ module.exports = function (config, zonesToConfig, reset){
             }
             //binary sensors
             messages.push(configSensor(zone, i));
+
+            //bypass switches
+            messages.push(configSwitchBypass(zone, i));
         }
 
         //alarm state

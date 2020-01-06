@@ -15,7 +15,8 @@
         "host": "192.168.1.82",
         "port": "1883",
         "username": "admin",
-        "password": "password"
+        "password": "password",
+        "clientId": "ialarm-mqtt"
     },
     "topics" : {
         "availability": "ialarm/alarm/availability",
@@ -23,7 +24,8 @@
         "alarm" : {
             "state" : "ialarm/alarm/state",
             "command" : "ialarm/alarm/set",
-            "event" : "ialarm/alarm/event"
+            "event" : "ialarm/alarm/event",
+            "bypass": "ialarm/alarm/zone/${zoneId}/bypass"
         },
         "sensors" : {
             "topicType" : "state",
@@ -61,9 +63,10 @@
         "topics": {
             "alarmConfig": "${discoveryPrefix}/alarm_control_panel/ialarm/config",
             "sensorConfig": "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config",
-            "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config"
+            "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config",
+            "bypassConfig" : "${discoveryPrefix}/switch/ialarm/${zoneId}/config"
         },
-        "code": "1504",
+        "code": "8734",
         "zoneName": "Zona",
         "zones" : {
             "problem" : {
@@ -100,6 +103,10 @@
         "events" : {
             "name" : "iAlarm last event",
             "icon" : "mdi:message-alert"
+        },
+        "bypass" : {
+            "name" : "Bypass",
+            "icon" : "mdi:lock-open"
         }
     }
 }

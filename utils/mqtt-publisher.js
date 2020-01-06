@@ -55,40 +55,91 @@ module.exports = function(config) {
     }
   }
 
-  this.connectAndSubscribe = function(alarmCommandCallback){
+  this.connectAndSubscribe = function(alarmCommands){
+
+    var clientId = config.mqtt.clientId || "ialarm-mqtt-"+Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     console.log("connection to MQTT broker: ", config.mqtt.host+":"+config.mqtt.port); 
     client  = mqtt.connect('mqtt://'+config.mqtt.host+":"+config.mqtt.port, {
       username: config.mqtt.username, 
       password: config.mqtt.password,
+      clientId : clientId,
       will: { topic: config.topics.availability, payload: 'offline' }
     })
      
      client.on('connect', function () {
-
-       client.subscribe(config.topics.alarm.command, function (err) {
-         if (err) {
-           console.log("Error subscribing" + err.toString())
-         }
-       });
-
+      console.log("connected..."); 
+      var topicsToSubscribe = [config.topics.alarm.command, config.topics.alarm.bypass.replace("${zoneId}", "+")];
+      console.log("subscribing to "+JSON.stringify(topicsToSubscribe)); 
+      client.subscribe(topicsToSubscribe, function(err) {
+        if (err) {
+          console.log("Error subscribing" + err.toString());
+        }
+      });
      });
      
-     client.on('message', function (topic, message) {
-      var command;
+     client.on("message", function(topic, message) {
+       var command;
        try {
          command = message.toString();
        } catch (error) {
          command = message;
        }
-       console.log("received topic '"+topic+"' : ", command);
-       if(topic === config.topics.alarm.command){
-        var ialarmCommand = _decodeStatus(command);
-        console.log("Alarm command: " +ialarmCommand + " ("+command+")"); 
-        if(alarmCommandCallback){
-          alarmCommandCallback(ialarmCommand);
-        }
+       console.log("received topic '" + topic + "' : ", command);
+
+       //arm/disarm topic
+       if (topic === config.topics.alarm.command) {
+         var ialarmCommand = _decodeStatus(command);
+         console.log("Alarm command: " + ialarmCommand + " (" + command + ")");
+         if (alarmCommands.armDisarm) {
+           alarmCommands.armDisarm(ialarmCommand);
+           console.log("Executed: " + ialarmCommand + " (" + command + ")");
+         }
+       } else {
+         //bypass topic
+         //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
+         //"ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
+         var strRegex = config.topics.alarm.bypass
+           .replace("/", "/")
+           .replace("${zoneId}", "(\\d{1,2})"); //.replace("+", "(\\d{1,2})")
+         var topicRegex = new RegExp(strRegex, "gm");
+         var match = topicRegex.exec(topic);
+         if (match) {
+           var zoneNumber = match[1];
+           console.log("Alarm bypass: zone " + zoneNumber + " (" + command + ")");
+
+           var accepted = ["1", "0", "true", "false", "on", "off"];
+           var knownCommand = false;
+           for (let index = 0; index < accepted.length; index++) {
+             const cmd = accepted[index];
+             if (cmd === command.toLowerCase()) {
+               knownCommand = true;
+               break;
+             }
+           }
+           if (!knownCommand) {
+             console.log(
+               "Alarm bypass zone " +
+                 zoneNumber +
+                 " ignored invalid command: " +
+                 command
+             );
+             return;
+           }
+           var bypass =
+             command === "1" ||
+             command.toLowerCase() === "true" ||
+             command.toLowerCase() === "on";
+           if (bypass) {
+             console.log("Alarm bypass zone " + zoneNumber);
+           } else {
+             console.log("Alarm bypass removed from zone " + zoneNumber);
+           }
+           if (alarmCommands.bypassZone) {
+             alarmCommands.bypassZone(zoneNumber, bypass);
+           }
+         }
        }
-     })
+     });
 
      client.on('error', function (err) {
        // message is Buffer

@@ -102,7 +102,6 @@ module.exports = (config) => {
                 //alarm state
                 publisher.publishStateIAlarm(status.status);
 
-                var lastChecked = new Date();
                 //add zone names
                 if(status.zones){
                     for (var i = 0; i < status.zones.length; i++) {
@@ -112,13 +111,8 @@ module.exports = (config) => {
                             zone.name = zoneCache.name;
                             zone.type = zoneCache.type;
                         }
-                        //state decode
-                        zone.problem = zone.message && zone.message !== 'OK';
-                        zone.alarm = zone.message && zone.message === 'zone alarm';
-                        zone.bypass = zone.message && zone.message === 'zone bypass';
-                        zone.lowbat = zone.message && zone.message === 'wireless detector low battery' || zone.message && zone.message === 'wireless detector loss';
-                        zone.fault = zone.message && zone.message === 'zone fault';     
-                        zone.lastChecked = lastChecked;                 
+                        //problem decode for rapid use in mqtt clients
+                        zone.problem = !zone.ok;
                     }
                 }
                 //sensor states
@@ -183,7 +177,7 @@ module.exports = (config) => {
         }
     }
 
-    function commandHandler(commandType){
+    function armDisarm(commandType){
 
         if(!commandType){
             console.error("Received invalid alarm command: "+commandType);
@@ -221,6 +215,40 @@ module.exports = (config) => {
         alarm[commandType]();
     }
 
+    function bypassZone(zoneNumber, bypass){
+
+        if(!zoneNumber || zoneNumber>40){
+            console.error("bypassZone: received invalid zone number: "+zoneNumber);
+            return;
+        }
+
+        if(!bypass){
+            bypass = false;
+        }
+
+        console.log("Received bypass "+bypass+" for zone number "+zoneNumber)
+        const alarm = newIAlarm();
+        alarm.on("command", function (status) {
+            console.log("new alarm status: "+status.status);
+            //alarm
+            publisher.publishStateIAlarm(status.status);
+            //notify last event
+            setTimeout(function(){
+                readEvents();
+            }, 500);
+            //and sensors
+            publisher.publishStateSensor(status.zones);
+        });
+        alarm.on("response", function (response) {
+        //console.log("Responded: "+response);
+        });
+        alarm.on("error", function (err) {
+            console.error(err);
+        });
+
+        alarm.bypassZone(zoneNumber, bypass);
+    }
+
 
     //start loop
     function start(){
@@ -231,6 +259,10 @@ module.exports = (config) => {
 
         //load zone names
         initZoneCache();
+
+        var commandHandler = {};
+        commandHandler.armDisarm = armDisarm;
+        commandHandler.bypassZone = bypassZone;
 
         publisher.connectAndSubscribe(commandHandler);
 
