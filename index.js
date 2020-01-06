@@ -120,7 +120,7 @@ module.exports = (config) => {
             });
 
             if(config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)){
-                console.log("loading "+serverconfig.server.zones+" zones cache...");
+                console.log("loading "+config.server.zones+" zones cache...");
             }else{
                 console.log("checking iAlarm status...");
                 alarm.getStatus();

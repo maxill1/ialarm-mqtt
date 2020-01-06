@@ -12,9 +12,31 @@ A mqtt bridge to iAlarm (https://www.antifurtocasa365.it/) and other chinese 'TC
 * home assistant [mqtt-discovery](https://www.home-assistant.io/docs/mqtt/discovery/)
 
 ## config
-edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need. Pay attention to "server.zones" number, by default the are 40 but you may want to reduce it to match your sensor number.
+edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need. 
 
 Optionally you can edit "hadiscovery" and topic structure (code, zone name prefix, icons, etc) or remove the entire "hadiscovery" node to disable home assistant mqtt discovery.
+
+### servers
+```
+"server" : {
+        "host": "192.168.1.x", //alarm web panel ip
+        "port": "80", //alarm web panel port
+        "username": "admin", //alarm web panel username
+        "password": "password", //alarm web panel password
+        "zones": 40, //number of zones to publish/handle. Can be a number (40 means all from 1 to 40) or an array of included zones [1,2,3,4,5,6,15,19,22]
+        "polling" : {
+            "status" : 30000,
+            "events" : 10000
+        }
+    },
+    "mqtt" : {
+        "host": "192.168.1.x", //mqtt server ip
+        "port": "1883", //mqtt server port
+        "username": "admin", //mqtt server username
+        "password": "password", //mqtt server password
+        "clientId": "ialarm-mqtt" //mqtt client id (unique: if already exists mqtt server will disconnect the first. To autogenerate a random client id remove the 'clientId' property)
+    },
+```
 
 ### topics
 ```

@@ -156,11 +156,11 @@ module.exports = function(config) {
       return;
     }
 
-    var configuredZones = config.server.zones || zones.length || 40;
+    var configuredZones = zones.length;
 
     //one payload with all sensors data (sensors attrs)
     if(!config.topics.sensors.topicType || config.topics.sensors.topicType === 'state'){
-      _publishAndLog(config.topics.sensors.state, zones.slice(0, configuredZones));
+      _publishAndLog(config.topics.sensors.state, zones);
     }
     //multiple payload with single sensor data
     if (zones && zones.length > 0 && (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'zone')) {
@@ -214,13 +214,20 @@ module.exports = function(config) {
       _publish(m.topic, m.payload);
   }
 
-  this.publishHomeAssistantMqttDiscovery = function(zones, reset){
-    //mqtt discovery messages to publish
+  this.publishHomeAssistantMqttDiscovery = function(zones){
+
+    //Reset of 40 zones
     const iAlarmHaDiscovery = require('./mqtt-hadiscovery');
-    var messages = new iAlarmHaDiscovery(config, zones, reset).createMessages();
+    var messages = new iAlarmHaDiscovery(config, zones, true).createMessages();
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index];
-      _publish(m.topic, "");//reset
+      _publish(m.topic, "");
+    }
+
+    //mqtt discovery messages to publish
+    var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
+    for (let index = 0; index < messages.length; index++) {
+      const m = messages[index];
       _publish(m.topic, m.payload, {retain: true});//config
     }
   }
