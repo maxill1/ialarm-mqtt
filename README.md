@@ -120,6 +120,11 @@ Example with mqttthing (homebridge) default payloads
 docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
 ```
 
+for testing version:
+```
+docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:dev
+```
+
 ## running with nodejs
 
 ```
