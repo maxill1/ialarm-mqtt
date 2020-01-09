@@ -16,7 +16,8 @@
         "port": "1883",
         "username": "admin",
         "password": "password",
-        "clientId": "ialarm-mqtt"
+        "clientId": "ialarm-mqtt",
+        "cache" : "30m"
     },
     "topics" : {
         "availability": "ialarm/alarm/availability",
