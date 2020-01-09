@@ -17,7 +17,8 @@
         "username": "admin",
         "password": "password",
         "clientId": "ialarm-mqtt",
-        "cache" : "30m"
+        "cache" : "30m",
+        "retain" : true
     },
     "topics" : {
         "availability": "ialarm/alarm/availability",

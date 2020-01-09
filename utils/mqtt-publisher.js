@@ -121,6 +121,10 @@ module.exports = function(config) {
     }
 
     if(client){
+
+      options = options || {};
+      options.retain =  config.mqtt.retain || false;
+
       var payload = data;
       if(typeof data !== "string"){
         payload = JSON.stringify(data);
