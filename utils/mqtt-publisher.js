@@ -4,6 +4,34 @@ module.exports = function(config) {
 
   var client  = undefined;
 
+  var _cache = { data : {}, enabled : config.mqtt.cache!==undefined, time: function(){
+      const expr = config.mqtt.cache;  
+      if(expr){
+        var molt = 0;
+        
+        if(expr.endsWith("s")){
+          molt = 1000;
+        }else if(expr.endsWith("m")){
+          molt = 60000;
+        }else if(expr.endsWith("h")){
+          molt = 60000*60;
+        }else if(expr.endsWith("d")){
+          molt = 60000*60*24;
+        }else{
+          console.log("Using default cache: 5m");
+          //default 5 min
+          return 5*60000;
+        }
+        return expr.substring(0, expr.length-1) * molt;
+      }
+      return 0;
+    }()
+  };
+
+  var _resetCache = function(){
+    _cache.data = {};
+  }
+
   var _decodeStatus = function(status){
     var values = config.payloads.alarmDecoder;
     if(values){
@@ -41,17 +69,72 @@ module.exports = function(config) {
         dataLog = "Object with "+ Object.keys(data).length+ " keys";
       }
     }
-    console.log("sending topic '"+topic+"' : "+dataLog);
-    _publish(topic, data, options);
+    if(_publish(topic, data, options)){
+      console.log("sending topic '"+topic+"' : "+dataLog);
+    }
   }
-  var _publish = function(topic, data, options){
-    if(client){
-      if(typeof data !== "string"){
-        data = JSON.stringify(data);
+
+  var _cacheExpireDate = function(date){
+    return new Date(date.getTime() + _cache.time);
+  }
+
+  var _sameData = function (topic, obj2) {
+
+    if (!_cache.enabled || !_cache.data[topic] || !_cache.data[topic].lastChecked ||  new Date() > _cacheExpireDate(_cache.data[topic].lastChecked)  || topic.endsWith("/config")) {
+      return false;
+    }
+    
+    var obj1 = _cache.data[topic].payload;
+    return _sameObject(obj1, obj2);
+  }
+
+  var _sameObject = function(obj1, obj2){
+    if(Object.keys(obj1).length != Object.keys(obj2).length){
+      return false;
+    }
+    for (const key in obj1) {
+      if (key === 'lastChecked') {
+        continue;
       }
-      client.publish(topic, data, options);
+      if (obj1.hasOwnProperty(key)) {
+        const value1 = obj1[key];
+        const value2 = obj2[key];
+        if (typeof value1 !== typeof value2) {
+          return false;
+        }
+        if (typeof value1 === 'object') {
+          return _sameObject(value1, value2);
+        }
+        if(value1 !== value2){
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  var _publish = function(topic, data, options){
+
+    if(_sameData(topic, data)){
+      console.log(topic+ " - not publishing...unchanged");
+      return false;
+    }
+
+    if(client){
+      var payload = data;
+      if(typeof data !== "string"){
+        payload = JSON.stringify(data);
+      }
+      client.publish(topic, payload, options);
+      //cache the original data, ignoring config
+      if(!topic.endsWith("/config")){
+        _cache.data[topic] = { payload: data, lastChecked: data.lastChecked || new Date()};
+        console.log("Caching "+ topic + " until "+ _cacheExpireDate(_cache.data[topic].lastChecked));
+      }
+      return true;
     }else{
       console.log(topic+ " - error publishing...not connected");
+      return false;
     }
   }
 
@@ -74,6 +157,7 @@ module.exports = function(config) {
         if (err) {
           console.log("Error subscribing" + err.toString());
         }
+        _resetCache();
       });
      });
      
