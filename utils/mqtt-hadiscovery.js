@@ -28,16 +28,6 @@ module.exports = function (config, zonesToConfig, reset){
     var configSensor = function(zone, i) {
       var payload = "";
       if (!reset) {
-        var icon = config.hadiscovery.zones.default.icon;
-        var device_class = config.hadiscovery.zones.default.device_class;
-        if (zone.type) {
-          var type = zone.type.toLowerCase();
-          if (config.hadiscovery.zones[type]) {
-            icon = config.hadiscovery.zones[type].icon;
-            device_class = config.hadiscovery.zones[type].device_class;
-          }
-        }
-
         var zoneName = config.hadiscovery.zoneName;
         if (!zoneName) {
           zoneName = "Zone";
@@ -53,12 +43,29 @@ module.exports = function (config, zonesToConfig, reset){
           json_attributes_topic: config.topics.sensors.state,
           json_attributes_template: "{{ value_json[" + i + "] | tojson }}",
           unique_id: "alarm_zone_" + zone.id,
-          device_class: device_class,
           device: deviceConfig
         };
-        if (icon) {
-          m.payload.icon = icon;
+
+        //optional
+        var icon;
+        var device_class;
+        if(config.hadiscovery.zones){
+          if (zone.type) {
+            var type = zone.type.toLowerCase();
+            if (config.hadiscovery.zones[type]) {
+              icon = config.hadiscovery.zones[type].icon;
+              device_class = config.hadiscovery.zones[type].device_class;
+            }
+          }
+          if(!icon){
+            icon = config.hadiscovery.zones.default.icon;
+          }
+          if(!device_class){
+            device_class = config.hadiscovery.zones.default.device_class;
+          }
+          payload.icon = icon;
         }
+        payload.device_class = device_class || "safety"; //default
       }
       return {
         topic: _getTopic(config.hadiscovery.topics.sensorConfig, {
@@ -126,13 +133,17 @@ module.exports = function (config, zonesToConfig, reset){
           availability_topic: config.topics.availability,
           state_topic: config.topics.alarm.state,
           command_topic: config.topics.alarm.command,
-          code: config.hadiscovery.code,
           payload_disarm: config.payloads.alarm.disarm,
           payload_arm_home: config.payloads.alarm.armHome,
           payload_arm_away: config.payloads.alarm.armAway,
           payload_available: config.payloads.alarmAvailable,
-          payload_not_available: config.payloads.alarmNotvailable
+          payload_not_available: config.payloads.alarmNotvailable,
+          qos: 2 //important!
         };
+        //optional
+        if(config.hadiscovery.code){
+          payload.code = config.hadiscovery.code;
+        }
       }
       return {
         topic: _getTopic(config.hadiscovery.topics.alarmConfig),

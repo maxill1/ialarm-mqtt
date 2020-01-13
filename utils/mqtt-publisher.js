@@ -68,6 +68,8 @@ module.exports = function(config) {
       }else{
         dataLog = "Object with "+ Object.keys(data).length+ " keys";
       }
+    }else{
+      dataLog = data;
     }
     if(_publish(topic, data, options)){
       console.log("sending topic '"+topic+"' : "+dataLog);
@@ -155,7 +157,7 @@ module.exports = function(config) {
      
      client.on('connect', function () {
       console.log("connected..."); 
-      var topicsToSubscribe = [config.topics.alarm.command, config.topics.alarm.bypass.replace("${zoneId}", "+")];
+      var topicsToSubscribe = [config.topics.alarm.command, config.topics.alarm.bypass.replace("${zoneId}", "+"), config.topics.alarm.discovery];
       console.log("subscribing to "+JSON.stringify(topicsToSubscribe)); 
       client.subscribe(topicsToSubscribe, function(err) {
         if (err) {
@@ -182,7 +184,15 @@ module.exports = function(config) {
            alarmCommands.armDisarm(ialarmCommand);
            console.log("Executed: " + ialarmCommand + " (" + command + ")");
          }
-       } else {
+         
+       } else  if (topic === config.topics.alarm.discovery) { //any payload
+        console.log("Requested new HA discovery...");
+        if (alarmCommands.discovery) {
+          var on = command === 'on' || command === 1 || command == "true";
+          alarmCommands.discovery(on);
+        }
+        
+      } else {
          //bypass topic
          //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
          //"ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
@@ -302,21 +312,23 @@ module.exports = function(config) {
       _publish(m.topic, m.payload);
   }
 
-  this.publishHomeAssistantMqttDiscovery = function(zones){
+  this.publishHomeAssistantMqttDiscovery = function(zones, on){
 
     //Reset of 40 zones
     const iAlarmHaDiscovery = require('./mqtt-hadiscovery');
     var messages = new iAlarmHaDiscovery(config, zones, true).createMessages();
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index];
-      _publish(m.topic, "");
+      _publishAndLog(m.topic, m.payload, {retain: true});
     }
 
-    //mqtt discovery messages to publish
-    var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
-    for (let index = 0; index < messages.length; index++) {
-      const m = messages[index];
-      _publish(m.topic, m.payload, {retain: true});//config
+    if(on){
+      //mqtt discovery messages to publish
+      var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
+      for (let index = 0; index < messages.length; index++) {
+        const m = messages[index];
+        _publishAndLog(m.topic, m.payload, {retain: true});//config
+      }
     }
   }
 

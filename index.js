@@ -39,7 +39,7 @@ module.exports = (config) => {
         return undefined;
     };
 
-    function initZoneCache(){
+    function initZoneCache(initCallback){
         
         console.log("Loading zone cache...");
 
@@ -64,10 +64,7 @@ module.exports = (config) => {
             globalContext.zonesCache.zones = zones;
             globalContext.zonesCache.caching = false;
 
-            //home assistant mqtt discovery (if present)
-            if(config.hadiscovery){
-                publisher.publishHomeAssistantMqttDiscovery(Object.values(globalContext.zonesCache.zones));
-            }
+            initCallback();
         });
 
         alarm.on('zoneInfo', function (zoneInfo) {
@@ -249,6 +246,13 @@ module.exports = (config) => {
         alarm.bypassZone(zoneNumber, bypass);
     }
 
+    function discovery(enabled){
+        //home assistant mqtt discovery (if not enabled it will reset all /config topics)
+        publisher.publishHomeAssistantMqttDiscovery(Object.values(globalContext.zonesCache.zones), enabled);
+        if(!enabled){
+            console.log("Home assistant discovery disabled (empty config.hadiscovery)");
+        }
+    }
 
     //start loop
     function start(){
@@ -258,25 +262,32 @@ module.exports = (config) => {
         console.log("Events polling every ", config.server.polling.events, " ms"); 
 
         //load zone names
-        initZoneCache();
+        initZoneCache(function(){
 
-        var commandHandler = {};
-        commandHandler.armDisarm = armDisarm;
-        commandHandler.bypassZone = bypassZone;
+            //mqtt init
+            var commandHandler = {};
+            commandHandler.armDisarm = armDisarm;
+            commandHandler.bypassZone = bypassZone;
+            commandHandler.discovery = discovery;
+            publisher.connectAndSubscribe(commandHandler);
 
-        publisher.connectAndSubscribe(commandHandler);
+            //if enabled
+            discovery(config.hadiscovery.enabled);
 
-        //alarm and sensor status
-        setInterval(function(){
-            publisher.publishAvailable();
+            //alarm and sensor status
+            setInterval(function(){
+                publisher.publishAvailable();
 
-            readStatus();
-        }, config.server.polling.status);
+                readStatus();
+            }, config.server.polling.status);
 
-        //event messages
-        setInterval(function(){
-            readEvents();
-        }, config.server.polling.events);
+            //event messages
+            setInterval(function(){
+                readEvents();
+            }, config.server.polling.events);
+
+
+        });
 
     }
 
