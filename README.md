@@ -47,6 +47,7 @@ Optionally you can edit "hadiscovery" and topic structure (code, zone name prefi
             "state" : "ialarm/alarm/state", //current alarm status
             "command" : "ialarm/alarm/set", //alarm set command
             "event" : "ialarm/alarm/event", //last event string as recorded in the alarm log,
+            "discovery" : "ialarm/alarm/discovery", //false=disable discovery (empty /config topics for all entities), true=enable discovery (send new /config topics for all entities)
             "bypass": "ialarm/alarm/zone/${zoneId}/bypass" //command to bypass/restore a zone
         },
         "sensors" : {

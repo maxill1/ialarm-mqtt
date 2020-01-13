@@ -83,6 +83,7 @@ try {
         _checkConfig(config, ['topics', 'alarm', 'state']);
         _checkConfig(config, ['topics', 'alarm', 'event']);
         _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, "ialarm/alarm/zone/${zoneId}/bypass");
+        _checkConfig(config, ['topics', 'alarm', 'discovery'], 0, "ialarm/alarm/discovery");
         _checkConfig(config, ['payloads', 'alarmAvailable']);
         _checkConfig(config, ['payloads', 'alarmNotvailable']);
         _checkConfig(config, ['payloads', 'alarmDecoder']);
@@ -90,9 +91,16 @@ try {
         _checkConfig(config, ['payloads', 'sensorOn']);
         _checkConfig(config, ['payloads', 'sensorOff']);
 
-        if(config.hadiscovery){
-          _checkConfig(config, ['hadiscovery', 'topics', 'bypassConfig'], 0, "${discoveryPrefix}/switch/ialarm/${zoneId}/config");
+
+        if(!config.hadiscovery){
+          config.hadiscovery = { enabled : false, topics : {}, events : {}, bypass: {}};
         }
+        _checkConfig(config, ['hadiscovery', 'discoveryPrefix'], 0, "homeassistant");
+        _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, "${discoveryPrefix}/alarm_control_panel/ialarm/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, "${discoveryPrefix}/sensor/ialarm/events/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'bypassConfig'], 0, "${discoveryPrefix}/switch/ialarm/${zoneId}/config");
+        _checkConfig(config, ['hadiscovery', 'zoneName'], 0, "Zone");
 
         ialarmMqtt(config)
     } else {
