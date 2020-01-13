@@ -187,7 +187,7 @@ module.exports = function(config) {
          
        } else  if (topic === config.topics.alarm.discovery) { //any payload
         console.log("Requested new HA discovery...");
-        if (alarmCommands.discovery) {
+        if (alarmCommands.discovery && command) {
           var on = command === 'on' || command === 1 || command == "true";
           alarmCommands.discovery(on);
         }
