@@ -16,7 +16,9 @@
         "port": "1883",
         "username": "admin",
         "password": "password",
-        "clientId": "ialarm-mqtt"
+        "clientId": "ialarm-mqtt",
+        "cache" : "30m",
+        "retain" : true
     },
     "topics" : {
         "availability": "ialarm/alarm/availability",
@@ -25,6 +27,7 @@
             "state" : "ialarm/alarm/state",
             "command" : "ialarm/alarm/set",
             "event" : "ialarm/alarm/event",
+            "discovery" : "ialarm/alarm/discovery",
             "bypass": "ialarm/alarm/zone/${zoneId}/bypass"
         },
         "sensors" : {
@@ -66,7 +69,7 @@
             "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config",
             "bypassConfig" : "${discoveryPrefix}/switch/ialarm/${zoneId}/config"
         },
-        "code": "8734",
+        "code": "",
         "zoneName": "Zona",
         "zones" : {
             "problem" : {
