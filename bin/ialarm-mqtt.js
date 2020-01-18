@@ -13,7 +13,7 @@ try {
       const key = Array.isArray(paths) ? paths[index] : paths;
       var exists = object !== undefined && object[key] !== undefined;
       if (!exists) {
-        if (defaultValue && index === paths.length - 1) {
+        if (defaultValue !== undefined && index === paths.length - 1) {
           //create default
           console.log(
             "Config.json value not specified on " +
@@ -100,6 +100,8 @@ try {
         _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, "${discoveryPrefix}/sensor/ialarm/events/config");
         _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config");
         _checkConfig(config, ['hadiscovery', 'topics', 'bypassConfig'], 0, "${discoveryPrefix}/switch/ialarm/${zoneId}/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'alarm_qos'], 0, 2);
+        _checkConfig(config, ['hadiscovery', 'topics', 'sensors_qos'], 0, 0);
         _checkConfig(config, ['hadiscovery', 'zoneName'], 0, "Zone");
 
         ialarmMqtt(config)
