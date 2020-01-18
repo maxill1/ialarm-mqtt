@@ -23,6 +23,7 @@
     "topics" : {
         "availability": "ialarm/alarm/availability",
         "error" : "ialarm/alarm/error",
+        "alarm_qos": 2,
         "alarm" : {
             "state" : "ialarm/alarm/state",
             "command" : "ialarm/alarm/set",
@@ -33,6 +34,7 @@
         "sensors" : {
             "topicType" : "state",
             "state": "ialarm/sensors/state",
+            "sensors_qos": 0,
             "zone": {
                 "alarm": "ialarm/sensors/${zoneId}/alarm",
                 "active": "ialarm/sensors/${zoneId}/active",        
