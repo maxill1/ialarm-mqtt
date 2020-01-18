@@ -43,7 +43,8 @@ module.exports = function (config, zonesToConfig, reset){
           json_attributes_topic: config.topics.sensors.state,
           json_attributes_template: "{{ value_json[" + i + "] | tojson }}",
           unique_id: "alarm_zone_" + zone.id,
-          device: deviceConfig
+          device: deviceConfig, 
+          qos: config.topics.sensors.sensors_qos
         };
 
         //optional
@@ -87,6 +88,7 @@ module.exports = function (config, zonesToConfig, reset){
           unique_id: "ialarm_events",
           icon: config.hadiscovery.events.icon,
           device: deviceConfig
+          qos: config.topics.sensors.sensors_qos
         };
       }
       return {
@@ -112,7 +114,8 @@ module.exports = function (config, zonesToConfig, reset){
           }),
           unique_id: "alarm_bypass_zone_" + zone.id,
           icon: config.hadiscovery.bypass.icon,
-          device: deviceConfig
+          device: deviceConfig,
+          qos: config.topics.sensors.sensors_qos
         };
       }
       return {
@@ -138,7 +141,7 @@ module.exports = function (config, zonesToConfig, reset){
           payload_arm_away: config.payloads.alarm.armAway,
           payload_available: config.payloads.alarmAvailable,
           payload_not_available: config.payloads.alarmNotvailable,
-          qos: 2 //important!
+          qos: config.topics.alarm_qos
         };
         //optional
         if(config.hadiscovery.code){
