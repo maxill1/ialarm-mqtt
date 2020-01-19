@@ -87,7 +87,7 @@ module.exports = function (config, zonesToConfig, reset){
           state_topic: config.topics.alarm.event,
           unique_id: "ialarm_events",
           icon: config.hadiscovery.events.icon,
-          device: deviceConfig
+          device: deviceConfig,
           qos: config.topics.sensors.sensors_qos
         };
       }
