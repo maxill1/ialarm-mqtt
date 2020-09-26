@@ -48,6 +48,7 @@ Optionally you can edit "hadiscovery" and topic structure (code, zone name prefi
             "command" : "ialarm/alarm/set", //alarm set command
             "event" : "ialarm/alarm/event", //last event string as recorded in the alarm log,
             "discovery" : "ialarm/alarm/discovery", //false=disable discovery (empty /config topics for all entities), true=enable discovery (send new /config topics for all entities)
+            "resetCache" : "ialarm/alarm/resetCache", //with empty or any payload (reset the cache and send fresh sensor and alarm data)
             "bypass": "ialarm/alarm/zone/${zoneId}/bypass" //command to bypass/restore a zone
         },
         "sensors" : {
@@ -113,6 +114,20 @@ Example with mqttthing (homebridge) default payloads
             "triggered": "T"
         }
     },
+
+```
+
+### specific zone config
+
+Most of the sensors are normally closed but some water leak works as normally open contact, so to correcly report them to home assistant the sensor can configured as "contactType" : "NO" and "statusProperty" : "open" (normally we check "problem" which is related to the status code != 0 and in this case is 16)To report the sensor as a different kind (smoke, gas, door, moisture, etc) just change "device_class" to [one of those supported by Home Assistant](https://www.home-assistant.io/integrations/binary_sensor/#device-class).
+```	
+     "zones": {
+        "39": {
+            "contactType": "NO",
+            "device_class": "moisture",
+            "statusProperty": "open"
+        }
+    }
 
 ```
 

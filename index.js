@@ -99,6 +99,8 @@ module.exports = (config) => {
                 //alarm state
                 publisher.publishStateIAlarm(status.status);
 
+
+
                 //add zone names
                 if (status.zones) {
                     for (var i = 0; i < status.zones.length; i++) {
@@ -108,6 +110,14 @@ module.exports = (config) => {
                             zone.name = zoneCache.name;
                             zone.type = zoneCache.type;
                         }
+                        //normally open /normally closed (default closed)
+                        if (config.zones
+                            && config.zones[zone.id]
+                            && config.zones[zone.id]["contactType"] === 'NO') {
+                            //invert open/problem data
+                            zone.open = !zone.open;
+                        }
+
                         //problem decode for rapid use in mqtt clients
                         zone.problem = !zone.ok;
                     }
