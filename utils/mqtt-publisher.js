@@ -174,7 +174,7 @@ module.exports = function (config) {
         config.topics.alarm.command,
         config.topics.alarm.bypass.replace("${zoneId}", "+"),
         config.topics.alarm.discovery,
-        config.topics.alarm.resetCache,
+        config.topics.alarm.resetCache
       ];
       console.log("subscribing to " + JSON.stringify(topicsToSubscribe));
       client.subscribe(topicsToSubscribe, function (err) {
@@ -344,12 +344,15 @@ module.exports = function (config) {
     }
 
     if (on) {
-      //mqtt discovery messages to publish
-      var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
-      for (let index = 0; index < messages.length; index++) {
-        const m = messages[index];
-        _publishAndLog(m.topic, m.payload, { retain: true });//config
-      }
+      //let's wait HA processes all the entity reset, then submit again the discovered entity
+      setTimeout(function () {
+        //mqtt discovery messages to publish
+        var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
+        for (let index = 0; index < messages.length; index++) {
+          const m = messages[index];
+          _publishAndLog(m.topic, m.payload, { retain: true });//config
+        }
+      }, 5000);
     }
   }
 

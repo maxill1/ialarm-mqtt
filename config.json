@@ -145,5 +145,12 @@
             "name": "Bypass",
             "icon": "mdi:lock-open"
         }
+    },
+    "zones": {
+        "39": {
+            "contactType": "NO",
+            "device_class": "moisture",
+            "statusProperty": "open"
+        }
     }
 }
