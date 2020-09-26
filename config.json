@@ -1,117 +1,149 @@
 {
-    "verbose" : false,
-    "server" : {
+    "verbose": false,
+    "server": {
         "host": "192.168.1.81",
         "port": "80",
         "username": "admin",
         "password": "password",
         "zones": 40,
-        "polling" : {
-            "status" : 30000,
-            "events" : 10000
+        "polling": {
+            "status": 30000,
+            "events": 10000
         }
     },
-    "mqtt" : {
+    "mqtt": {
         "host": "192.168.1.82",
         "port": "1883",
         "username": "admin",
         "password": "password",
         "clientId": "ialarm-mqtt",
-        "cache" : "30m",
-        "retain" : true
+        "cache": "5m",
+        "retain": true
     },
-    "topics" : {
+    "topics": {
         "availability": "ialarm/alarm/availability",
-        "error" : "ialarm/alarm/error",
+        "error": "ialarm/alarm/error",
         "alarm_qos": 2,
-        "alarm" : {
-            "state" : "ialarm/alarm/state",
-            "command" : "ialarm/alarm/set",
-            "event" : "ialarm/alarm/event",
-            "discovery" : "ialarm/alarm/discovery",
+        "alarm": {
+            "state": "ialarm/alarm/state",
+            "command": "ialarm/alarm/set",
+            "event": "ialarm/alarm/event",
+            "discovery": "ialarm/alarm/discovery",
+            "resetCache": "ialarm/alarm/resetcache",
             "bypass": "ialarm/alarm/zone/${zoneId}/bypass"
         },
-        "sensors" : {
-            "topicType" : "state",
+        "sensors": {
+            "topicType": "state",
             "state": "ialarm/sensors/state",
             "sensors_qos": 0,
             "zone": {
                 "alarm": "ialarm/sensors/${zoneId}/alarm",
-                "active": "ialarm/sensors/${zoneId}/active",        
+                "active": "ialarm/sensors/${zoneId}/active",
                 "lowBattery": "ialarm/sensors/${zoneId}/battery",
                 "fault": "ialarm/sensors/${zoneId}/fault"
             }
         }
     },
     "payloads": {
-        "alarmAvailable" : "online",
-        "alarmNotvailable" : "offline",
+        "alarmAvailable": "online",
+        "alarmNotvailable": "offline",
         "alarmDecoder": {
-            "armAway" : ["armAway", "armedAway", "armed_away", "arm_away", "AA", "AwayArm"],
-            "armHome" : ["armHome", "armedHome", "armed_home", "arm_home", "SA", "HomeArm" ,"StayArm", "armStay", "armedStay", "arm_stay", "armed_stay"],
-            "disarm" : ["disarm", "disarmed", "D"],
-            "cancel" : ["cancel", "canceled", "C"],
-            "triggered": [ "trigger",  "triggered", "T"]
+            "armAway": [
+                "armAway",
+                "armedAway",
+                "armed_away",
+                "arm_away",
+                "AA",
+                "AwayArm"
+            ],
+            "armHome": [
+                "armHome",
+                "armedHome",
+                "armed_home",
+                "arm_home",
+                "SA",
+                "HomeArm",
+                "StayArm",
+                "armStay",
+                "armedStay",
+                "arm_stay",
+                "armed_stay"
+            ],
+            "disarm": [
+                "disarm",
+                "disarmed",
+                "D"
+            ],
+            "cancel": [
+                "cancel",
+                "canceled",
+                "C"
+            ],
+            "triggered": [
+                "trigger",
+                "triggered",
+                "T"
+            ]
         },
-        "alarm":{
-            "armAway" : "armed_away",
-            "armHome" : "armed_home",
-            "disarm" : "disarmed",
-            "cancel" : "cancel",
+        "alarm": {
+            "armAway": "armed_away",
+            "armHome": "armed_home",
+            "disarm": "disarmed",
+            "cancel": "cancel",
             "triggered": "triggered"
         },
-        "sensorOn" : "1",
-        "sensorOff" : "0"
+        "sensorOn": "1",
+        "sensorOff": "0"
     },
     "hadiscovery": {
-        "discoveryPrefix" : "homeassistant",
+        "discoveryPrefix": "homeassistant",
         "topics": {
             "alarmConfig": "${discoveryPrefix}/alarm_control_panel/ialarm/config",
             "sensorConfig": "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config",
-            "eventsConfig" : "${discoveryPrefix}/sensor/ialarm/events/config",
-            "bypassConfig" : "${discoveryPrefix}/switch/ialarm/${zoneId}/config"
+            "eventsConfig": "${discoveryPrefix}/sensor/ialarm/events/config",
+            "bypassConfig": "${discoveryPrefix}/switch/ialarm/${zoneId}/config"
         },
         "code": "",
         "zoneName": "Zona",
-        "zones" : {
-            "problem" : {
-                "zone bypass" : "safety",
-                "zone fault" : "problem",
-                "wireless detector low battery" : "battery",
-                "wireless detector loss" : "connectivity"
+        "zones": {
+            "problem": {
+                "zone bypass": "safety",
+                "zone fault": "problem",
+                "wireless detector low battery": "battery",
+                "wireless detector loss": "connectivity"
             },
-            "default" : {
-                "device_class" : "safety"
+            "default": {
+                "device_class": "safety"
             },
-            "perimetrale" : {
-                "device_class" : "motion"
+            "perimetrale": {
+                "device_class": "motion"
             },
-            "ritardata" : {
-                "device_class" : "door"
+            "ritardata": {
+                "device_class": "door"
             },
-            "interna" : {
-                "device_class" : "moving"
+            "interna": {
+                "device_class": "moving"
             },
-            "emergenza" : {
-                "device_class" : "safety"
+            "emergenza": {
+                "device_class": "safety"
             },
-            "24 ore" : {
-                "device_class" : "gas"
+            "24 ore": {
+                "device_class": "gas"
             },
-            "incendio" : {
-                "device_class" : "smoke"
+            "incendio": {
+                "device_class": "smoke"
             },
-            "chiavi" : {
-                "device_class" : "lock"
+            "chiavi": {
+                "device_class": "lock"
             }
         },
-        "events" : {
-            "name" : "iAlarm last event",
-            "icon" : "mdi:message-alert"
+        "events": {
+            "name": "iAlarm last event",
+            "icon": "mdi:message-alert"
         },
-        "bypass" : {
-            "name" : "Bypass",
-            "icon" : "mdi:lock-open"
+        "bypass": {
+            "name": "Bypass",
+            "icon": "mdi:lock-open"
         }
     }
 }
