@@ -3,7 +3,7 @@ const iAlarmPublisher = require('./utils/mqtt-publisher');
 
 module.exports = (config) => {
 
-    if(!config){
+    if (!config) {
         console.error('Please provide a valid config.json');
         process.exit(1);
     }
@@ -12,35 +12,35 @@ module.exports = (config) => {
 
     var globalContext = {};
 
-    function newIAlarm(){
+    function newIAlarm() {
         console.debug("Creating new iAlarm connection")
         return new iAlarm(config.server.host, config.server.port,
-                            config.server.username, config.server.password,
-                            config.server.zones);
+            config.server.username, config.server.password,
+            config.server.zones);
     }
 
-    function handleError(e){
+    function handleError(e) {
         let error = e;
-        if(e.message){
+        if (e.message) {
             error = e.message;
         }
-        let msg = "error " +error;
+        let msg = "error " + error;
         console.log(msg);
         console.log(e);
         publisher.publishError(msg);
     }
 
-    function getZoneCache(id){
-        if(globalContext.zonesCache &&
-        globalContext.zonesCache.zones &&
-        globalContext.zonesCache.zones[id]){
-        return globalContext.zonesCache.zones[id];
+    function getZoneCache(id) {
+        if (globalContext.zonesCache &&
+            globalContext.zonesCache.zones &&
+            globalContext.zonesCache.zones[id]) {
+            return globalContext.zonesCache.zones[id];
         }
         return undefined;
     };
 
-    function initZoneCache(initCallback){
-        
+    function initZoneCache(initCallback) {
+
         console.log("Loading zone cache...");
 
         var host = config.server.host;
@@ -54,12 +54,12 @@ module.exports = (config) => {
 
         const alarm = newIAlarm();
         alarm.on("error", function (err) {
-            console.log("error: "+err);
+            console.log("error: " + err);
             publisher.publishError(err);
         });
 
         alarm.on('allZones', function (zones) {
-            var info = "got "+Object.keys(zones).length+" zones info";
+            var info = "got " + Object.keys(zones).length + " zones info";
             console.log(info);
             globalContext.zonesCache.zones = zones;
             globalContext.zonesCache.caching = false;
@@ -68,20 +68,20 @@ module.exports = (config) => {
         });
 
         alarm.on('zoneInfo', function (zoneInfo) {
-            console.log("zoneInfo: "+JSON.stringify(zoneInfo));
+            console.log("zoneInfo: " + JSON.stringify(zoneInfo));
         });
 
-        if(!globalContext.zonesCache){
+        if (!globalContext.zonesCache) {
             globalContext.zonesCache = {};
         }
-        if(!globalContext.zonesCache.zones  && !globalContext.zonesCache.caching){
+        if (!globalContext.zonesCache.zones && !globalContext.zonesCache.caching) {
             globalContext.zonesCache.zones = {};
             globalContext.zonesCache.caching = true;
             alarm.getAllZones();
         }
     }
 
-    function readStatus(){
+    function readStatus() {
 
         try {
             const alarm = newIAlarm();
@@ -99,15 +99,25 @@ module.exports = (config) => {
                 //alarm state
                 publisher.publishStateIAlarm(status.status);
 
+
+
                 //add zone names
-                if(status.zones){
+                if (status.zones) {
                     for (var i = 0; i < status.zones.length; i++) {
                         var zone = status.zones[i];
                         var zoneCache = getZoneCache(zone.id);
-                        if(zoneCache){
+                        if (zoneCache) {
                             zone.name = zoneCache.name;
                             zone.type = zoneCache.type;
                         }
+                        //normally open /normally closed (default closed)
+                        if (config.zones
+                            && config.zones[zone.id]
+                            && config.zones[zone.id]["contactType"] === 'NO') {
+                            //invert open/problem data
+                            zone.open = !zone.open;
+                        }
+
                         //problem decode for rapid use in mqtt clients
                         zone.problem = !zone.ok;
                     }
@@ -116,19 +126,19 @@ module.exports = (config) => {
                 publisher.publishStateSensor(status.zones);
             });
 
-            if(config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)){
-                console.log("loading "+config.server.zones+" zones cache...");
-            }else{
+            if (config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)) {
+                console.log("loading " + config.server.zones + " zones cache...");
+            } else {
                 console.log("checking iAlarm status...");
                 alarm.getStatus();
             }
 
         } catch (e) {
-        handleError(e);
+            handleError(e);
         }
     }
 
-    function readEvents(){
+    function readEvents() {
 
         try {
 
@@ -143,24 +153,24 @@ module.exports = (config) => {
 
             alarm.on("events", function (events) {
                 let lastEvent = "No events";
-                if(events.length>0){
+                if (events.length > 0) {
 
                     for (var i = 0; i < events.length; i++) {
                         var zoneCache = getZoneCache(events[i].zone);
-                        if(zoneCache){
-                        events[i].name = zoneCache.name;
-                        events[i].type = zoneCache.type;
+                        if (zoneCache) {
+                            events[i].name = zoneCache.name;
+                            events[i].type = zoneCache.type;
                         }
                     }
 
                     let ev = events[0];
                     var description = ev.zone;
-                    if(ev.name){
-                        description = description+ " "+ ev.name;
+                    if (ev.name) {
+                        description = description + " " + ev.name;
                     }
-                    lastEvent =  ev.date + " "+ev.message+" (zone "+description +")";
+                    lastEvent = ev.date + " " + ev.message + " (zone " + description + ")";
                     //publish only if changed or empty
-                    if(lastEvent && (!globalContext.lastEventCache || lastEvent!==globalContext.lastEventCache)){
+                    if (lastEvent && (!globalContext.lastEventCache || lastEvent !== globalContext.lastEventCache)) {
                         globalContext.lastEventCache = lastEvent;
                         publisher.publishEvent(lastEvent);
                     }
@@ -174,70 +184,70 @@ module.exports = (config) => {
         }
     }
 
-    function armDisarm(commandType){
+    function armDisarm(commandType) {
 
-        if(!commandType){
-            console.error("Received invalid alarm command: "+commandType);
+        if (!commandType) {
+            console.error("Received invalid alarm command: " + commandType);
             return;
         }
 
-        console.log("Received alarm command: "+commandType)
+        console.log("Received alarm command: " + commandType)
         const alarm = newIAlarm();
         alarm.on("command", function (status) {
-            console.log("new alarm status: "+status.status);
+            console.log("new alarm status: " + status.status);
             //alarm
             publisher.publishStateIAlarm(status.status);
             //notify last event
-            setTimeout(function(){
+            setTimeout(function () {
                 readEvents();
             }, 500);
             //and sensors
             publisher.publishStateSensor(status.zones);
-            
- 
+
+
         });
         alarm.on("response", function (response) {
-        //console.log("Responded: "+response);
+            //console.log("Responded: "+response);
         });
         alarm.on("error", function (err) {
             console.error(err);
         });
 
-        if(config.debug){
-           console.log("DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm."+ commandType + "()");
-           console.log("DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm."+ commandType + "()");
-           publisher.publishStateIAlarm(commandType);
-           return;
+        if (config.debug) {
+            console.log("DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm." + commandType + "()");
+            console.log("DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm." + commandType + "()");
+            publisher.publishStateIAlarm(commandType);
+            return;
         }
         alarm[commandType]();
     }
 
-    function bypassZone(zoneNumber, bypass){
+    function bypassZone(zoneNumber, bypass) {
 
-        if(!zoneNumber || zoneNumber>40){
-            console.error("bypassZone: received invalid zone number: "+zoneNumber);
+        if (!zoneNumber || zoneNumber > 40) {
+            console.error("bypassZone: received invalid zone number: " + zoneNumber);
             return;
         }
 
-        if(!bypass){
+        if (!bypass) {
             bypass = false;
         }
 
-        console.log("Received bypass "+bypass+" for zone number "+zoneNumber)
+        console.log("Received bypass " + bypass + " for zone number " + zoneNumber)
         const alarm = newIAlarm();
         alarm.on("command", function (status) {
-            console.log("new alarm status: "+status.status);
+            console.log("new alarm status: " + status.status);
             //alarm
             publisher.publishStateIAlarm(status.status);
             //notify last event
-            setTimeout(function(){
+            setTimeout(function () {
                 readEvents();
             }, 500);
             //and sensors
             publisher.publishStateSensor(status.zones);
         });
         alarm.on("response", function (response) {
-        //console.log("Responded: "+response);
+            //console.log("Responded: "+response);
         });
         alarm.on("error", function (err) {
             console.error(err);
@@ -246,43 +256,53 @@ module.exports = (config) => {
         alarm.bypassZone(zoneNumber, bypass);
     }
 
-    function discovery(enabled){
+    function discovery(enabled) {
         //home assistant mqtt discovery (if not enabled it will reset all /config topics)
         publisher.publishHomeAssistantMqttDiscovery(Object.values(globalContext.zonesCache.zones), enabled);
-        if(!enabled){
+        if (!enabled) {
             console.log("Home assistant discovery disabled (empty config.hadiscovery)");
         }
     }
 
+
+    function resetCache() {
+        console.log("iAlarm cache cleared");
+        publisher.resetCache();
+
+        //sending fresh data
+        readStatus();
+    }
+
     //start loop
-    function start(){
+    function start() {
         console.log("Starting up...");
 
-        console.log("Status polling every ", config.server.polling.status, " ms"); 
-        console.log("Events polling every ", config.server.polling.events, " ms"); 
+        console.log("Status polling every ", config.server.polling.status, " ms");
+        console.log("Events polling every ", config.server.polling.events, " ms");
 
         //load zone names
-        initZoneCache(function(){
+        initZoneCache(function () {
 
             //mqtt init
             var commandHandler = {};
             commandHandler.armDisarm = armDisarm;
             commandHandler.bypassZone = bypassZone;
             commandHandler.discovery = discovery;
+            commandHandler.resetCache = resetCache;
             publisher.connectAndSubscribe(commandHandler);
 
             //if enabled
             discovery(config.hadiscovery.enabled);
 
             //alarm and sensor status
-            setInterval(function(){
+            setInterval(function () {
                 publisher.publishAvailable();
 
                 readStatus();
             }, config.server.polling.status);
 
             //event messages
-            setInterval(function(){
+            setInterval(function () {
                 readEvents();
             }, config.server.polling.events);
 
