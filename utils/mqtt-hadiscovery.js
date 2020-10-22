@@ -37,12 +37,14 @@ module.exports = function (config, zonesToConfig, reset) {
       //optional
       var icon;
       var device_class;
-      var statusProperty;
+      var statusProperty = "problem"; //default problem (code != 0, es. 16 )
       //priority to zone config
       if (config.zones && config.zones[zone.id]) {
         icon = config.zones[zone.id].icon;
         device_class = config.zones[zone.id].device_class;
-        statusProperty = config.zones[zone.id].statusProperty || "problem"; //default problem (code != 0, es. 16 )
+        if (config.zones[zone.id].statusProperty) {
+          statusProperty = config.zones[zone.id].statusProperty;
+        }
       }
 
       payload = {
