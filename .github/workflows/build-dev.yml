@@ -20,7 +20,7 @@ jobs:
           echo ::set-output name=tag_name::${TAG}
           echo ::set-output name=version::${TAG}
           echo ::set-output name=build_date::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          echo ::set-output name=docker_platforms::linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/386
+          echo ::set-output name=docker_platforms::linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
           echo ::set-output name=docker_username::${DOCKER_USERNAME}
           echo ::set-output name=docker_image::${DOCKER_USERNAME}/${PROJECT_NAME}
       -
