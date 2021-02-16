@@ -136,9 +136,32 @@ Most of the sensors are normally closed but some water leak works as normally op
 docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:latest
 ```
 
+or using docker-compose:
+```
+version: '3.3'
+services:
+  ialarm:
+    image: maxill1/ialarm-mqtt:latest
+    container_name: ialarm-mqtt
+    volumes:
+        - /path/to/my/config:/config
+    restart: always
+```
+
 for testing version:
 ```
 docker run --name ialarm-mqtt --restart always -v /path/to/my/config:/config maxill1/ialarm-mqtt:dev
+```
+or using docker-compose:
+```
+version: '3.3'
+services:
+  ialarm:
+    image: maxill1/ialarm-mqtt:dev
+    container_name: ialarm-mqtt
+    volumes:
+        - /path/to/my/config:/config
+    restart: always
 ```
 
 ## running with nodejs
