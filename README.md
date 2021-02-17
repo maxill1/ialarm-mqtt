@@ -11,17 +11,12 @@ A mqtt bridge to iAlarm (https://www.antifurtocasa365.it/) and other chinese 'TC
 * zone info (ok/problem, open, alarm, bypass, fault, low battery, signal loss) - NOTE: in order to obtain 'open' property in real time you must enable "DoorDetect" ("Ispezione sensori porta" on italian guard ip panel) in your alarm web panel options (http://192.168.1.x/Option.htm)
 * home assistant [mqtt-discovery](https://www.home-assistant.io/docs/mqtt/discovery/)
 
+## Home assistant integration
+Go here for some info and example.
+https://github.com/maxill1/ialarm-mqtt/wiki/Home-Assistant-Integration
+
 ## config
 edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need. 
-
-Optionally you can edit "hadiscovery" and topic structure (code, zone name prefix, icons, etc) or set the "hadiscovery.enabled" to false to disable home assistant mqtt discovery.
-
-```
-  "hadiscovery": {
-        "enabled": false
-        [...]
-  }
-```
 
 ### servers
 ```
