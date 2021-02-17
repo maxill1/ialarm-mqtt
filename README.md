@@ -14,7 +14,14 @@ A mqtt bridge to iAlarm (https://www.antifurtocasa365.it/) and other chinese 'TC
 ## config
 edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need. 
 
-Optionally you can edit "hadiscovery" and topic structure (code, zone name prefix, icons, etc) or remove the entire "hadiscovery" node to disable home assistant mqtt discovery.
+Optionally you can edit "hadiscovery" and topic structure (code, zone name prefix, icons, etc) or set the "hadiscovery.enabled" to false to disable home assistant mqtt discovery.
+
+```
+  "hadiscovery": {
+        "enabled": false
+        [...]
+  }
+```
 
 ### servers
 ```

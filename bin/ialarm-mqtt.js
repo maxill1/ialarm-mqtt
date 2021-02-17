@@ -96,6 +96,7 @@ try {
     if (!config.hadiscovery) {
       config.hadiscovery = { enabled: false, topics: {}, events: {}, bypass: {} };
     }
+    _checkConfig(config, ['hadiscovery', 'enabled'], 0, true);
     _checkConfig(config, ['hadiscovery', 'discoveryPrefix'], 0, "homeassistant");
     _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, "${discoveryPrefix}/alarm_control_panel/ialarm/config");
     _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, "${discoveryPrefix}/sensor/ialarm/events/config");

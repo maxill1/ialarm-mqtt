@@ -96,6 +96,7 @@
         "sensorOff": "0"
     },
     "hadiscovery": {
+        "enabled": true,
         "discoveryPrefix": "homeassistant",
         "topics": {
             "alarmConfig": "${discoveryPrefix}/alarm_control_panel/ialarm/config",
