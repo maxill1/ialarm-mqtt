@@ -1,0 +1,38 @@
+{
+    "server": {
+        "host": "192.168.1.81",
+        "port": 80,
+        "username": "admin",
+        "password": "password",
+        "zones": 23,
+        "polling_status": 30000,
+        "polling_events": 10000
+    },
+    "mqtt": {
+        "host": "192.168.1.82",
+        "port": 1883,
+        "username": "admin",
+        "password": "password",
+        "clientId": "ialarm-mqtt",
+        "cache": "5m",
+        "retain": true
+    },
+    "code": null,
+    "zoneName": "Zone",
+    "events": {
+        "name": "iAlarm last event",
+        "icon": "mdi:message-alert"
+    },
+    "bypass": {
+        "name": "Bypass",
+        "icon": "mdi:lock-open"
+    },
+    "zones": [
+        {
+            "number": "39",
+            "contactType": "NC",
+            "device_class": "moisture",
+            "statusProperty": "open"
+        }
+    ]
+}
