@@ -117,13 +117,13 @@
                 "device_class": "safety"
             },
             "perimetrale": {
-                "device_class": "motion"
+                "device_class": "window"
             },
             "ritardata": {
                 "device_class": "door"
             },
             "interna": {
-                "device_class": "moving"
+                "device_class": "motion"
             },
             "emergenza": {
                 "device_class": "safety"
