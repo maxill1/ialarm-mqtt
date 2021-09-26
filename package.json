@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "ialarm": "0.3.2",
-    "mqtt": "^3.0.0"
+    "mqtt": "^4.2.8"
   },
   "main": "index.js",
   "scripts": {
