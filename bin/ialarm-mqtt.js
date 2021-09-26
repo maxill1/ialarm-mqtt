@@ -2,6 +2,7 @@
 
 const ialarmMqtt = require('../');
 try {
+  var configFile;
 
   var _checkConfig = function (object, paths, index, defaultValue) {
     if (!index) {
@@ -17,7 +18,7 @@ try {
         //create default
         console.log(
           "Config.json value not specified on " +
-          config.file +
+          configFile +
           " using default '" +
           defaultValue +
           "' on " +
@@ -26,7 +27,7 @@ try {
         object[key] = defaultValue;
       } else {
         throw "subscribe error: " +
-        config.file +
+        configFile +
         " is missing '" +
         paths[index] +
         "' on " +
@@ -46,7 +47,7 @@ try {
       if (cmdArgs && cmdArgs.length > 0) {
         for (let index = 0; index < cmdArgs.length; index++) {
           const item = cmdArgs[index];
-          if (item === '-w' || item === '-d' || item === '-p' || item === '-t' || item === '-c') {
+          if (item === '-w' || item === '-d' || item === '-p' || item === '-t' || item === '-c' || item === '--hassos') {
             data[item] = cmdArgs[index + 1];
             console.error("Found arg " + item + " with value " + data[item]);
           }
@@ -60,21 +61,61 @@ try {
 
   var cmdArgs = parseArgs();
 
-  if (!cmdArgs['-c']) {
+  if (!cmdArgs['--hassos'] && !cmdArgs['-c']) {
     console.log("please provide the path of the folder containing config.json: ", "ialarm-mqtt -c /path");
     process.exit(1);
   }
 
-  var configPath = cmdArgs['-c'];
-  if (!configPath.endsWith("/")) {
-    configPath = configPath + "/"
+  //merge default config.json with options.json
+  var config;
+  if (cmdArgs['--hassos']) {
+    configFile = cmdArgs['--hassos'];
+    console.log("Trying to merge HASSOS options file (" + cmdArgs['--hassos'] + ") with default config.json");
+    var hassos = require(cmdArgs['--hassos']);
+    //default file
+    config = require('../config.json');
+    //merge main nodes
+    config.server = hassos.server;
+    config.mqtt = hassos.mqtt;
+
+    //merge polling
+    config.server.polling = {
+      events: hassos.server.polling_events,
+      status: hassos.server.polling_status
+    }
+    //merge hadiscovery values
+    config.hadiscovery.code = hassos.code || '';
+    config.hadiscovery.zoneName = hassos.zoneName || 'Zone';
+    config.hadiscovery.events = hassos.events;
+    config.hadiscovery.bypass = hassos.bypass;
+
+    //merge zones
+    hassos.zones && hassos.zones.forEach(zone => {
+      config.zones['' + zone.number] = zone;
+    });
+
+  } else {
+
+    var configPath = cmdArgs['-c'];
+    //if is a json file
+    if (configPath.endsWith(".json")) {
+      configFile = configPath;
+      console.log("Found external config.json", configPath);
+      config = require(configFile);
+    } else {
+      //Folder
+      if (!configPath.endsWith("/")) {
+        configPath = configPath + "/"
+      }
+      console.log("Searching external config.json in path", configPath);
+      //loading external file
+      configFile = configPath + 'config.json';
+      config = require(configFile);
+    }
   }
-  console.log("Found external config.json", configPath);
-  configFile = configPath + 'config.json'
-  var config = require(configFile);
+
 
   if (config) {
-    config.file = configFile;
     //checks
     _checkConfig(config, ['mqtt', 'host']);
     _checkConfig(config, ['mqtt', 'port']);
