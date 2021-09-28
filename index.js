@@ -14,9 +14,13 @@ module.exports = (config) => {
 
     function newIAlarm() {
         console.debug("Creating new iAlarm connection")
-        return new iAlarm(config.server.host, config.server.port,
-            config.server.username, config.server.password,
-            config.server.zones);
+        return new iAlarm(
+            config.server.host,
+            config.server.port,
+            config.server.username,
+            config.server.password,
+            config.server.zones,
+            config.server.pages);
     }
 
     function handleError(e) {
