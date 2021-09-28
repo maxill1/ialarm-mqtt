@@ -1,31 +1,31 @@
 {
-  "name": "ialarm-mqtt",
-  "version": "0.7.4",
-  "description": "ialarm to mqtt bridge",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/maxill1/ialarm-mqtt.git"
-  },
-  "dependencies": {
-    "ialarm": "0.3.2",
-    "mqtt": "^4.2.8"
-  },
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "bin": {
-    "ialarm-mqtt": "./bin/ialarm-mqtt.js"
-  },
-  "keywords": [
-    "mqtt",
-    "ialarm",
-    "alarm",
-    "antifurto365",
-    "meian",
-    "emoolux",
-    "tcp ip alarm"
-  ],
-  "author": "Luca Mazzilli",
-  "license": "MIT"
+    "name": "ialarm-mqtt",
+    "version": "0.7.4",
+    "description": "ialarm to mqtt bridge",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/maxill1/ialarm-mqtt.git"
+    },
+    "dependencies": {
+        "ialarm": "^0.3.3",
+        "mqtt": "^4.2.8"
+    },
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "bin": {
+        "ialarm-mqtt": "./bin/ialarm-mqtt.js"
+    },
+    "keywords": [
+        "mqtt",
+        "ialarm",
+        "alarm",
+        "antifurto365",
+        "meian",
+        "emoolux",
+        "tcp ip alarm"
+    ],
+    "author": "Luca Mazzilli",
+    "license": "MIT"
 }

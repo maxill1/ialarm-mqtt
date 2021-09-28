@@ -4,9 +4,16 @@
         "port": 80,
         "username": "admin",
         "password": "password",
-        "zones": 23,
+        "zones": [
+            17
+        ],
         "polling_status": 30000,
-        "polling_events": 10000
+        "polling_events": 10000,
+        "pages": [
+            "/status.html",
+            "/Zone.html",
+            "/SystemLog.html"
+        ]
     },
     "mqtt": {
         "host": "192.168.1.82",
