@@ -87,31 +87,25 @@ module.exports = (config) => {
 
         try {
             newAlarm().getEvents().then(function (events) {
-                if (events.length > 0) {
 
-                    for (var i = 0; i < events.length; i++) {
-                        var zoneCache = getZoneCache(events[i].zone);
-                        if (zoneCache) {
-                            events[i].name = zoneCache.name;
-                            events[i].type = zoneCache.type;
-                        }
+                const lastEvent = events && events.length > 1 ? events[0] : undefined;
+                if (lastEvent) {
+                    var zoneCache = getZoneCache(lastEvent.zone);
+                    if (zoneCache) {
+                        lastEvent.name = zoneCache.name;
+                        lastEvent.type = zoneCache.type;
                     }
 
-                    let ev = events[0];
-                    var description = ev.zone;
-                    if (ev.name) {
-                        description = description + " " + ev.name;
+                    var description = lastEvent.zone;
+                    if (lastEvent.name) {
+                        description = description + " " + lastEvent.name;
                     }
-                    const lastEvent = {
-                        ...events[0],
-                        description: ev.message + " (zone " + description + ")"
-                    };
-                    //publish only if changed or empty
-                    if (lastEvent && (!globalContext.lastEventCache || lastEvent !== globalContext.lastEventCache)) {
-                        globalContext.lastEventCache = lastEvent;
-                        publisher.publishEvent(lastEvent);
-                    }
+                    lastEvent.description = lastEvent.message + " (zone " + description + ")";
                 }
+
+                //publish only if changed or empty
+                publisher.publishEvent(lastEvent);
+
             }, handleError).catch(handleError);
 
         } catch (e) {
