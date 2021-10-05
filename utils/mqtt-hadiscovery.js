@@ -103,7 +103,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 availability_topic: config.topics.availability,
                 state_topic: config.topics.alarm.event,
                 value_template: "{{value_json.description}}",
-                json_attributes_topic: config.topics.sensors.event,
+                json_attributes_topic: config.topics.alarm.event,
                 json_attributes_template: "{{ value_json | tojson }}",
                 unique_id: "ialarm_events",
                 icon: config.hadiscovery.events.icon,
