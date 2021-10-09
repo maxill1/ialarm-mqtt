@@ -40,25 +40,30 @@ module.exports = function (config) {
     this.resetCache = _resetCache;
 
     var _decodeStatus = function (status) {
-        var values = config.payloads.alarmDecoder;
-        if (values) {
-            for (const key in values) {
-                if (values.hasOwnProperty(key)) {
-                    const item = values[key];
-                    if (Array.isArray(item)) {
-                        for (let index = 0; index < item.length; index++) {
-                            const element = item[index];
-                            if (element.toLowerCase() === status.toLowerCase()) {
+        try {
+            const currentStatus = status.toLowerCase();
+            var values = config.payloads.alarmDecoder;
+            if (values && currentStatus) {
+                for (const key in values) {
+                    if (values.hasOwnProperty(key)) {
+                        const item = values[key];
+                        if (Array.isArray(item)) {
+                            for (let index = 0; index < item.length; index++) {
+                                const element = item[index];
+                                if (element.toLowerCase() === currentStatus) {
+                                    return key;
+                                }
+                            }
+                        } else {
+                            if (item.toLowerCase() === currentStatus) {
                                 return key;
                             }
-                        }
-                    } else {
-                        if (item.toLowerCase() === status.toLowerCase()) {
-                            return key;
                         }
                     }
                 }
             }
+        } catch (error) {
+            console.log("error")
         }
         return status;
     }

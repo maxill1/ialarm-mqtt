@@ -1,4 +1,4 @@
-const iAlarm = require("ialarm/ialarm-tcp");
+const iAlarm = require("ialarm");
 const iAlarmPublisher = require('./utils/mqtt-publisher');
 
 module.exports = (config) => {
@@ -118,6 +118,10 @@ module.exports = (config) => {
      * @param {*} param0 
      */
     function publishFullState(data) {
+
+        if (data.status.event === 'response') {
+            console.log(data)
+        }
 
         //we want to publish emtpy statues
         const { status, zones } = data ? data : {};
