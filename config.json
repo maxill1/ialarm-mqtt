@@ -2,19 +2,14 @@
     "verbose": false,
     "server": {
         "host": "192.168.1.81",
-        "port": "80",
+        "port": 18034,
         "username": "admin",
         "password": "password",
         "zones": 40,
         "polling": {
             "status": 30000,
             "events": 10000
-        },
-        "pages": [
-            "/RemoteCtr.htm",
-            "/Zone.htm",
-            "/SystemLog.htm"
-        ]
+        }
     },
     "mqtt": {
         "host": "192.168.1.82",

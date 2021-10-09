@@ -1,19 +1,14 @@
 {
     "server": {
         "host": "192.168.1.81",
-        "port": 80,
+        "port": 18034,
         "username": "admin",
         "password": "password",
         "zones": [
             17
         ],
         "polling_status": 30000,
-        "polling_events": 10000,
-        "pages": [
-            "/status.html",
-            "/Zone.html",
-            "/SystemLog.html"
-        ]
+        "polling_events": 10000
     },
     "mqtt": {
         "host": "192.168.1.82",

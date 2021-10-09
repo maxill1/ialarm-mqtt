@@ -12,15 +12,13 @@ module.exports = (config) => {
 
     var globalContext = {};
 
-    function newIAlarm() {
-        console.debug("Creating new iAlarm connection")
+
+    function newAlarm() {
         return new iAlarm(
             config.server.host,
             config.server.port,
             config.server.username,
-            config.server.password,
-            config.server.zones,
-            config.server.pages);
+            config.server.password)
     }
 
     function handleError(e) {
@@ -38,7 +36,7 @@ module.exports = (config) => {
         if (globalContext.zonesCache &&
             globalContext.zonesCache.zones &&
             globalContext.zonesCache.zones[id]) {
-            return globalContext.zonesCache.zones[id];
+            return globalContext.zonesCache.zones.find(z => z.id === id);
         }
         return undefined;
     };
@@ -56,174 +54,133 @@ module.exports = (config) => {
             throw 'Missing required configuration'
         }
 
-        const alarm = newIAlarm();
-        alarm.on("error", function (err) {
-            console.log("error: " + err);
-            publisher.publishError(err);
-        });
-
-        alarm.on('allZones', function (zones) {
-            var info = "got " + Object.keys(zones).length + " zones info";
-            console.log(info);
-            globalContext.zonesCache.zones = zones;
-            globalContext.zonesCache.caching = false;
-
-            initCallback();
-        });
-
-        alarm.on('zoneInfo', function (zoneInfo) {
-            console.log("zoneInfo: " + JSON.stringify(zoneInfo));
-        });
 
         if (!globalContext.zonesCache) {
-            globalContext.zonesCache = {};
+            globalContext.zonesCache = { zones: {}, caching: true };
         }
-        if (!globalContext.zonesCache.zones && !globalContext.zonesCache.caching) {
-            globalContext.zonesCache.zones = {};
-            globalContext.zonesCache.caching = true;
-            alarm.getAllZones();
-        }
+
+        //initial zone info fetch
+        newAlarm().getZoneInfo().then(function (response) {
+            var info = "got " + Object.keys(response).length + " zones info";
+            console.log(info);
+            globalContext.zonesCache.zones = response.filter(z => z.typeId > 0 && z.name !== '');
+            globalContext.zonesCache.caching = false;
+            initCallback();
+        }, handleError).catch(handleError);
     }
 
+    /**
+     * Read and publis state
+     */
     function readStatus() {
-
         try {
-            const alarm = newIAlarm();
-
-            alarm.on("response", function (response) {
-                //console.log("Responded: "+response);
-            });
-            alarm.on("error", function (err) {
-                publisher.publishError(err);
-            });
-
-            alarm.on("status", function (status) {
-                //console.debug("status: "+JSON.stringify(status));
-
-                //alarm state
-                publisher.publishStateIAlarm(status.status);
-
-
-
-                //add zone names
-                if (status.zones) {
-                    for (var i = 0; i < status.zones.length; i++) {
-                        var zone = status.zones[i];
-                        var zoneCache = getZoneCache(zone.id);
-                        if (zoneCache) {
-                            zone.name = zoneCache.name;
-                            zone.type = zoneCache.type;
-                        }
-                        //normally open /normally closed (default closed)
-                        if (config.zones
-                            && config.zones[zone.id]
-                            && config.zones[zone.id]["contactType"] === 'NO') {
-                            //invert open/problem data
-                            zone.open = !zone.open;
-                        }
-
-                        //problem decode for rapid use in mqtt clients
-                        zone.problem = !zone.ok;
-                    }
-                }
-                //sensor states
-                publisher.publishStateSensor(status.zones);
-            });
-
-            if (config.server.waitnames && (!globalContext.zonesCache || globalContext.zonesCache.caching)) {
-                console.log("loading " + config.server.zones + " zones cache...");
-            } else {
-                console.log("checking iAlarm status...");
-                alarm.getStatus();
-            }
-
+            newAlarm().getStatus().then(publishFullState, handleError).catch(handleError);
         } catch (e) {
             handleError(e);
         }
     }
 
+    /**
+     * Read logs and publish new events
+     */
     function readEvents() {
 
         try {
+            newAlarm().getEvents().then(function (events) {
 
-            const alarm = newIAlarm();
-
-            alarm.on("response", function (response) {
-                //console.log("Responded: "+response);
-            });
-            alarm.on("error", function (err) {
-                publisher.publishError(err);
-            });
-
-            alarm.on("events", function (events) {
-                let lastEvent = "No events";
-                if (events.length > 0) {
-
-                    for (var i = 0; i < events.length; i++) {
-                        var zoneCache = getZoneCache(events[i].zone);
-                        if (zoneCache) {
-                            events[i].name = zoneCache.name;
-                            events[i].type = zoneCache.type;
-                        }
+                const lastEvent = events && events.length > 1 ? events[0] : undefined;
+                if (lastEvent) {
+                    var zoneCache = getZoneCache(lastEvent.zone);
+                    if (zoneCache) {
+                        lastEvent.name = zoneCache.name;
+                        lastEvent.type = zoneCache.type;
                     }
 
-                    let ev = events[0];
-                    var description = ev.zone;
-                    if (ev.name) {
-                        description = description + " " + ev.name;
+                    var description = lastEvent.zone;
+                    if (lastEvent.name) {
+                        description = description + " " + lastEvent.name;
                     }
-                    lastEvent = ev.date + " " + ev.message + " (zone " + description + ")";
-                    //publish only if changed or empty
-                    if (lastEvent && (!globalContext.lastEventCache || lastEvent !== globalContext.lastEventCache)) {
-                        globalContext.lastEventCache = lastEvent;
-                        publisher.publishEvent(lastEvent);
-                    }
+                    lastEvent.description = lastEvent.message + " (zone " + description + ")";
                 }
-            });
 
-            alarm.getEvents();
+                //publish only if changed or empty
+                publisher.publishEvent(lastEvent);
+
+            }, handleError).catch(handleError);
 
         } catch (e) {
             handleError(e);
         }
     }
 
+    /**
+     * publish received state and fetch new events 
+     * @param {*} param0 
+     */
+    function publishFullState(data) {
+
+        if (data.status.event === 'response') {
+            console.log(data)
+        }
+
+        //we want to publish emtpy statues
+        const { status, zones } = data ? data : {};
+
+        //console.log(`New alarm status: ${status}`);
+        //alarm
+        publisher.publishStateIAlarm(status);
+
+        //add zone names
+        if (zones) {
+            for (let zoneNumber = 0; zoneNumber < config.zones.length; zoneNumber++) {
+                var zone = zones.find(z => z.id === zoneNumber);
+                if (zone) {
+                    const zoneConfig = config.zones[zoneNumber];
+                    //normally open /normally closed (default closed)
+                    if (zoneConfig["contactType"] === 'NO') {
+                        //invert open/problem data
+                        zone.open = !zone.open;
+                    }
+                }
+            }
+        }
+
+        //publish sensors
+        publisher.publishStateSensor(zones);
+    }
+
+    /**
+     * publish received state and fetch new events 
+     * @param {*} param0 
+     */
+    function publishStateAndFetchEvents(data) {
+
+        publishFullState(data)
+
+        //notify last event
+        setTimeout(function () {
+            readEvents();
+        }, 500);
+    }
+
     function armDisarm(commandType) {
+        const alarm = newAlarm();
+        if (!commandType || !alarm[commandType]()) {
+            console.log(`Received invalid alarm command: ${commandType}`);
+        } else {
+            console.log(`Received alarm command: ${commandType}`);
+            //force publish on next round
+            publisher.resetCache();
+            //command
+            alarm[commandType]().then(publishStateAndFetchEvents, handleError).catch(handleError);
 
-        if (!commandType) {
-            console.error("Received invalid alarm command: " + commandType);
-            return;
+            if (config.debug) {
+                console.log("DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm." + commandType + "()");
+                console.log("DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm." + commandType + "()");
+                publisher.publishStateIAlarm(commandType);
+                return;
+            }
         }
-
-        console.log("Received alarm command: " + commandType)
-        const alarm = newIAlarm();
-        alarm.on("command", function (status) {
-            console.log("new alarm status: " + status.status);
-            //alarm
-            publisher.publishStateIAlarm(status.status);
-            //notify last event
-            setTimeout(function () {
-                readEvents();
-            }, 500);
-            //and sensors
-            publisher.publishStateSensor(status.zones);
-
-
-        });
-        alarm.on("response", function (response) {
-            //console.log("Responded: "+response);
-        });
-        alarm.on("error", function (err) {
-            console.error(err);
-        });
-
-        if (config.debug) {
-            console.log("DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm." + commandType + "()");
-            console.log("DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm." + commandType + "()");
-            publisher.publishStateIAlarm(commandType);
-            return;
-        }
-        alarm[commandType]();
     }
 
     function bypassZone(zoneNumber, bypass) {
@@ -238,26 +195,10 @@ module.exports = (config) => {
         }
 
         console.log("Received bypass " + bypass + " for zone number " + zoneNumber)
-        const alarm = newIAlarm();
-        alarm.on("command", function (status) {
-            console.log("new alarm status: " + status.status);
-            //alarm
-            publisher.publishStateIAlarm(status.status);
-            //notify last event
-            setTimeout(function () {
-                readEvents();
-            }, 500);
-            //and sensors
-            publisher.publishStateSensor(status.zones);
-        });
-        alarm.on("response", function (response) {
-            //console.log("Responded: "+response);
-        });
-        alarm.on("error", function (err) {
-            console.error(err);
-        });
 
-        alarm.bypassZone(zoneNumber, bypass);
+        //force publish on next round
+        publisher.resetCache();
+        newAlarm().bypassZone(zoneNumber, bypass).then(publishStateAndFetchEvents, handleError).catch(handleError);
     }
 
     function discovery(enabled) {
