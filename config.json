@@ -9,12 +9,7 @@
         "polling": {
             "status": 30000,
             "events": 10000
-        },
-        "pages": [
-            "/RemoteCtr.htm",
-            "/Zone.htm",
-            "/SystemLog.htm"
-        ]
+        }
     },
     "mqtt": {
         "host": "192.168.1.82",
