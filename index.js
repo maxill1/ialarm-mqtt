@@ -130,16 +130,21 @@ module.exports = (config) => {
         //alarm
         publisher.publishStateIAlarm(status);
 
-        //add zone names
-        if (zones) {
-            for (let zoneNumber = 0; zoneNumber < config.zones.length; zoneNumber++) {
-                var zone = zones.find(z => z.id === zoneNumber);
-                if (zone) {
-                    const zoneConfig = config.zones[zoneNumber];
-                    //normally open /normally closed (default closed)
-                    if (zoneConfig["contactType"] === 'NO') {
-                        //invert open/problem data
-                        zone.open = !zone.open;
+
+        //zone config override
+        if (zones && config.zones) {
+            for (const zoneId in config.zones) {
+                const zoneConfig = config.zones[zoneId];
+                if (zoneConfig) {
+                    const zoneNumber = parseInt(zoneId)
+                    var zone = zones.find(z => z.id === zoneNumber);
+                    if (zone) {
+                        //normally open /normally closed (default closed)
+                        if (zoneConfig["contactType"] === 'NO') {
+                            const fault = zone[zoneConfig.statusProperty || 'fault'];
+                            //invert open/problem data
+                            zone[zoneConfig.statusProperty || 'fault'] = !fault;
+                        }
                     }
                 }
             }
