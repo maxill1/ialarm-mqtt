@@ -130,8 +130,7 @@ module.exports = function (config) {
                         return false;
                     }
                     //next
-                }
-                if (value1 !== value2) {
+                } else if (value1 !== value2) {
                     return false;
                 }
             }
