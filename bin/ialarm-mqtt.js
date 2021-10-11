@@ -127,6 +127,14 @@ try {
         _checkConfig(config, ['topics', 'alarm', 'discovery'], 0, "ialarm/alarm/discovery");
         _checkConfig(config, ['topics', 'alarm', 'resetCache'], 0, "ialarm/alarm/resetCache");
         _checkConfig(config, ['topics', 'alarm', 'configStatus'], 0, "ialarm/alarm/configStatus");
+        _checkConfig(config, ['topics', 'sensors', 'topicType'], 0, "state");
+        _checkConfig(config, ['topics', 'sensors', 'state'], 0, "ialarm/sensors/state");
+        _checkConfig(config, ['topics', 'sensors', 'sensors_qos'], 0, 0);
+        _checkConfig(config, ['topics', 'sensors', 'zone', 'state'], 0, "ialarm/sensors/zone_${zoneId}");
+        _checkConfig(config, ['topics', 'sensors', 'zone', 'alarm'], 0, "ialarm/sensors/zone_${zoneId}/alarm");
+        _checkConfig(config, ['topics', 'sensors', 'zone', 'active'], 0, "ialarm/sensors/zone_${zoneId}/wirelessLoss");
+        _checkConfig(config, ['topics', 'sensors', 'zone', 'lowBattery'], 0, "ialarm/sensors/zone_${zoneId}/lowbat");
+        _checkConfig(config, ['topics', 'sensors', 'zone', 'fault'], 0, "ialarm/sensors/zone_${zoneId}/fault");
         _checkConfig(config, ['payloads', 'alarmAvailable']);
         _checkConfig(config, ['payloads', 'alarmNotvailable']);
         _checkConfig(config, ['payloads', 'alarmDecoder']);

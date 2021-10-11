@@ -138,10 +138,14 @@ module.exports = function (config, zonesToConfig, reset) {
             if (!zoneName) {
                 zoneName = "Zone";
             }
-            var value_template = `{{ '${config.payloads.sensorOn}' if value_json[${index}].${statusProperty} else '${config.payloads.sensorOff}' }}`;
+            var value_template = `{{ '${config.payloads.sensorOn}' if value_json.${statusProperty} else '${config.payloads.sensorOff}' }}`;
             if (defaultOn) {
-                value_template = `{{  '${config.payloads.sensorOff}' if value_json[${index}].${statusProperty} else '${config.payloads.sensorOn}' }}`;
+                value_template = `{{  '${config.payloads.sensorOff}' if value_json.${statusProperty} else '${config.payloads.sensorOn}' }}`;
             }
+
+            const stateTopic = _getTopic(config.topics.sensors.zone.state, {
+                zoneId: zoneId
+            });
 
             payload = {
                 name: type + " " + zoneName + " " + zone.id + " " + zone.name,
@@ -150,9 +154,9 @@ module.exports = function (config, zonesToConfig, reset) {
                 value_template: value_template,
                 payload_on: config.payloads.sensorOn,
                 payload_off: config.payloads.sensorOff,
-                json_attributes_topic: config.topics.sensors.state,
-                json_attributes_template: `{{ value_json[${index}] | tojson }}`,
-                state_topic: config.topics.sensors.state,
+                json_attributes_topic: stateTopic,
+                json_attributes_template: `{{ value_json | tojson }}`,
+                state_topic: stateTopic,
                 unique_id: ("alarm_zone_" + zone.id + "_" + type).toLowerCase(),
                 device: deviceConfig,
                 qos: config.topics.sensors.sensors_qos
@@ -206,11 +210,15 @@ module.exports = function (config, zonesToConfig, reset) {
         var payload = "";
         const zoneId = zone.id;
         if (!reset) {
+            const stateTopic = _getTopic(config.topics.sensors.zone.state, {
+                zoneId: zoneId
+            });
+
             payload = {
                 name: bypassName + " " + zoneName + " " + zone.id + " " + zone.name,
                 availability_topic: config.topics.availability,
-                state_topic: config.topics.sensors.state,
-                value_template: `{{ '${config.payloads.sensorOn}' if value_json[${index}].bypass else '${config.payloads.sensorOff}' }}`,
+                state_topic: stateTopic,
+                value_template: `{{ '${config.payloads.sensorOn}' if value_json.bypass else '${config.payloads.sensorOff}' }}`,
                 payload_on: config.payloads.sensorOn,
                 payload_off: config.payloads.sensorOff,
                 command_topic: _getTopic(config.topics.alarm.bypass, {
