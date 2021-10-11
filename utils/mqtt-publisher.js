@@ -126,7 +126,10 @@ module.exports = function (config) {
                 }
                 if (typeof value1 === 'object') {
                     //checking childs
-                    return _sameObject(value1, value2);
+                    if (!_sameObject(value1, value2)) {
+                        return false;
+                    }
+                    //next
                 }
                 if (value1 !== value2) {
                     return false;
