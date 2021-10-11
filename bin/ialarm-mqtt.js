@@ -126,6 +126,7 @@ try {
     _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, "ialarm/alarm/zone/${zoneId}/bypass");
     _checkConfig(config, ['topics', 'alarm', 'discovery'], 0, "ialarm/alarm/discovery");
     _checkConfig(config, ['topics', 'alarm', 'resetCache'], 0, "ialarm/alarm/resetCache");
+        _checkConfig(config, ['topics', 'alarm', 'configStatus'], 0, "ialarm/alarm/configStatus");
     _checkConfig(config, ['payloads', 'alarmAvailable']);
     _checkConfig(config, ['payloads', 'alarmNotvailable']);
     _checkConfig(config, ['payloads', 'alarmDecoder']);
@@ -137,13 +138,19 @@ try {
     if (!config.hadiscovery) {
       config.hadiscovery = { enabled: false, topics: {}, events: {}, bypass: {} };
     }
+        if (!config.hadiscovery.topics) {
+            config.hadiscovery.topics = {};
+        }
     _checkConfig(config, ['hadiscovery', 'enabled'], 0, true);
     _checkConfig(config, ['hadiscovery', 'discoveryPrefix'], 0, "homeassistant");
     _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, "${discoveryPrefix}/alarm_control_panel/ialarm/config");
     _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, "${discoveryPrefix}/sensor/ialarm/events/config");
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config");
     _checkConfig(config, ['hadiscovery', 'topics', 'bypassConfig'], 0, "${discoveryPrefix}/switch/ialarm/${zoneId}/config");
-    _checkConfig(config, ['hadiscovery', 'topics', 'alarm_qos'], 0, 2);
+        _checkConfig(config, ['hadiscovery', 'topics', 'clearCacheConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_cache/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'clearDiscoveryConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_discovery/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'clearTriggeredConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_triggered/config");
+        _checkConfig(config, ['hadiscovery', 'topics', 'alarm_qos'], 0, 2);
     _checkConfig(config, ['hadiscovery', 'topics', 'sensors_qos'], 0, 0);
     _checkConfig(config, ['hadiscovery', 'zoneName'], 0, "Zone");
 
