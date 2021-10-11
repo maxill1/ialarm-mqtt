@@ -10,7 +10,7 @@ module.exports = (config) => {
 
     const publisher = new iAlarmPublisher(config);
 
-    var globalContext = {};
+    var zonesCache = {};
 
 
     function newAlarm() {
@@ -18,7 +18,8 @@ module.exports = (config) => {
             config.server.host,
             config.server.port,
             config.server.username,
-            config.server.password)
+            config.server.password,
+            config.server.zones)
     }
 
     function handleError(e) {
@@ -33,10 +34,10 @@ module.exports = (config) => {
     }
 
     function getZoneCache(id) {
-        if (globalContext.zonesCache &&
-            globalContext.zonesCache.zones &&
-            globalContext.zonesCache.zones[id]) {
-            return globalContext.zonesCache.zones.find(z => z.id === id);
+        if (zonesCache &&
+            zonesCache.zones &&
+            zonesCache.zones[id]) {
+            return zonesCache.zones.find(z => z.id === id);
         }
         return undefined;
     };
@@ -55,18 +56,28 @@ module.exports = (config) => {
         }
 
 
-        if (!globalContext.zonesCache) {
-            globalContext.zonesCache = { zones: {}, caching: true };
+        if (!zonesCache) {
+            zonesCache = { zones: {}, caching: true };
         }
 
         //initial zone info fetch
         newAlarm().getZoneInfo().then(function (response) {
             var info = "got " + Object.keys(response).length + " zones info";
             console.log(info);
-            globalContext.zonesCache.zones = response.filter(z => z.typeId > 0 && z.name !== '');
-            globalContext.zonesCache.caching = false;
+            //remove empty or disabled zones
+            zonesCache.zones = removeEmptyZones(response);
+            zonesCache.caching = false;
             initCallback();
         }, handleError).catch(handleError);
+    }
+
+    /**
+     * removes empty or disabled zones
+     * @param {*} zones 
+     * @returns 
+     */
+    function removeEmptyZones(zones) {
+        return zones.filter(z => z.typeId > 0 && z.name !== '')
     }
 
     /**
@@ -208,7 +219,7 @@ module.exports = (config) => {
 
     function discovery(enabled) {
         //home assistant mqtt discovery (if not enabled it will reset all /config topics)
-        publisher.publishHomeAssistantMqttDiscovery(Object.values(globalContext.zonesCache.zones), enabled);
+        publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled);
         if (!enabled) {
             console.log("Home assistant discovery disabled (empty config.hadiscovery)");
         }
