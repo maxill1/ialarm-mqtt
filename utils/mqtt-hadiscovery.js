@@ -93,6 +93,10 @@ module.exports = function (config, zonesToConfig, reset) {
         };
     };
 
+    /**
+     * Log event (last)
+     * @returns 
+     */
     var configSensorEvents = function () {
         var payload = "";
         if (!reset) {
@@ -142,6 +146,95 @@ module.exports = function (config, zonesToConfig, reset) {
             topic: _getTopic(config.hadiscovery.topics.bypassConfig, {
                 zoneId: zone.id
             }),
+            payload
+        };
+    };
+
+    /**
+    * switch to clear cached values
+    * @param {*} zone 
+    * @param {*} i 
+    * @returns 
+    */
+    var configSwitchClearCache = function () {
+        var payload = "";
+        if (!reset) {
+            payload = {
+                name: "iAlarm clean cache",
+                availability_topic: config.topics.availability,
+                state_topic: config.topics.alarm.configStatus,
+                value_template: `{{ value_json.cacheClear }}`,
+                command_topic: config.topics.alarm.resetCache,
+                payload_on: 'ON',
+                payload_off: 'OFF',
+                unique_id: "alarm_clear_cache",
+                icon: 'mdi:reload-alert',
+                device: deviceConfig,
+                qos: config.topics.sensors.sensors_qos
+            };
+        }
+        return {
+            topic: _getTopic(config.hadiscovery.topics.clearCacheConfig),
+            payload
+        };
+    };
+
+    /**
+    * switch to clear discovery
+    * @param {*} zone 
+    * @param {*} i 
+    * @returns 
+    */
+    var configSwitchClearDiscovery = function () {
+        var payload = "";
+        if (!reset) {
+            payload = {
+                name: "iAlarm clean discovery",
+                availability_topic: config.topics.availability,
+                state_topic: config.topics.alarm.configStatus,
+                value_template: `{{ value_json.discoveryClear }}`,
+                command_topic: config.topics.alarm.discovery,
+                payload_on: 'ON',
+                payload_off: 'OFF',
+                unique_id: "alarm_clear_discovery",
+                icon: 'mdi:refresh',
+                device: deviceConfig,
+                qos: config.topics.sensors.sensors_qos
+            };
+        }
+        return {
+            topic: _getTopic(config.hadiscovery.topics.clearDiscoveryConfig),
+            payload
+        };
+    };
+
+
+
+    /**
+     * switch to cancel triggered sensors alarms
+     * @param {*} zone 
+     * @param {*} i 
+     * @returns 
+     */
+    var configSwitchCancelTriggered = function () {
+        var payload = "";
+        if (!reset) {
+            payload = {
+                name: "iAlarm cancel triggered",
+                availability_topic: config.topics.availability,
+                state_topic: config.topics.alarm.configStatus,
+                value_template: `{{ value_json.cancel }}`,
+                command_topic: config.topics.alarm.command,
+                payload_on: 'cancel',
+                payload_off: 'OFF',
+                unique_id: "alarm_cancel_trigger",
+                icon: 'mdi:alarm-light',
+                device: deviceConfig,
+                qos: config.topics.sensors.sensors_qos
+            };
+        }
+        return {
+            topic: _getTopic(config.hadiscovery.topics.clearTriggeredConfig),
             payload
         };
     };
@@ -201,6 +294,12 @@ module.exports = function (config, zonesToConfig, reset) {
             //bypass switches
             messages.push(configSwitchBypass(zone, i));
         }
+
+        //switch to clear cache and discovery configs
+        messages.push(configSwitchClearCache());
+        messages.push(configSwitchClearDiscovery());
+        //cancel alarm triggered
+        messages.push(configSwitchCancelTriggered());
 
         //alarm state
         messages.push(configIAlarm());

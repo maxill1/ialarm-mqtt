@@ -215,13 +215,23 @@ module.exports = function (config) {
             } else if (topic === config.topics.alarm.discovery) { //any payload
                 console.log("Requested new HA discovery...");
                 if (alarmCommands.discovery && command) {
-                    var on = command === 'on' || command === 1 || command == "true";
+                    var on = command && (command.toLowerCase() === 'on' || command === 1 || command == "true");
                     alarmCommands.discovery(on);
                 }
+                _publish(config.topics.alarm.configStatus, {
+                    cacheClear: 'OFF',
+                    discoveryClear: 'OFF',
+                    cancel: 'OFF'
+                });
             } else if (topic === config.topics.alarm.resetCache) { //any payload
                 if (alarmCommands.resetCache) {
                     alarmCommands.resetCache();
                 }
+                _publish(config.topics.alarm.configStatus, {
+                    cacheClear: 'OFF',
+                    discoveryClear: 'OFF',
+                    cancel: 'OFF'
+                });
             } else {
                 //bypass topic
                 //var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
