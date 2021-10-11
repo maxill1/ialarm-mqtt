@@ -25,14 +25,22 @@ module.exports = function (config, zonesToConfig, reset) {
         return topic;
     };
 
-    var configSensor = function (zone, i) {
-        var payload = "";
+    /**
+     * binary sensor for "fault" property
+     * @param {*} zone 
+     * @param {*} i 
+     * @param {*} battery 
+     * @returns 
+     */
+    var configSensorFault = function (zone, i) {
+
+        const message = configBinarySensors(zone, i, "Motion", 'safety', 'fault', config.hadiscovery.topics.sensorConfig, false);;
+
         if (!reset) {
             var zoneName = config.hadiscovery.zoneName;
             if (!zoneName) {
                 zoneName = "Zone";
             }
-
 
             //optional
             var icon;
@@ -47,20 +55,11 @@ module.exports = function (config, zonesToConfig, reset) {
                 }
             }
 
-            payload = {
+            var payload = {
+                ...message.payload,
                 name: zoneName + " " + zone.id + " " + zone.name,
-                availability_topic: config.topics.availability,
-                //state_topic           : _getTopic(config.topics.sensors.zone.alarm, {"zoneId}" : zone.id}),
-                state_topic: config.topics.sensors.state,
-                value_template: "{{ '1' if value_json[" + i + "]." + statusProperty + " else '0' }}",
-                payload_on: config.payloads.sensorOn,
-                payload_off: config.payloads.sensorOff,
-                json_attributes_topic: config.topics.sensors.state,
-                json_attributes_template: "{{ value_json[" + i + "] | tojson }}",
                 unique_id: "alarm_zone_" + zone.id,
-                device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
-            };
+            }
 
             //fallback to generic hadiscovery
             if (config.hadiscovery.zones) {
@@ -84,10 +83,88 @@ module.exports = function (config, zonesToConfig, reset) {
                 payload.icon = icon;
             }
             payload.device_class = device_class || "safety"; //default
+
+            message.payload = payload;
+        }
+        return message;
+    };
+
+    /**
+     * binary sensor for "lowbat" property
+     * @param {*} zone 
+     * @param {*} i 
+     * @returns 
+     */
+    var configSensorBattery = function (zone, i) {
+        return configBinarySensors(zone, i, "Battery", 'battery', 'lowbat', config.hadiscovery.topics.sensorBatteryConfig, false);
+    };
+
+    /**
+     * binary sensor for "wirelessLoss" property
+     * @param {*} zone 
+     * @param {*} i 
+     * @returns 
+     */
+    var configSensorConnectivity = function (zone, i) {
+        return configBinarySensors(zone, i, "Connectivity", 'connectivity', 'wirelessLoss', config.hadiscovery.topics.sensorConnectivityConfig, true);
+    };
+
+    /**
+     * binary sensor for "alarm" property
+     * @param {*} zone 
+     * @param {*} i 
+     * @returns 
+     */
+    var configSensorAlarm = function (zone, i) {
+        return configBinarySensors(zone, i, "Alarm", 'safety', 'alarm', config.hadiscovery.topics.sensorAlarmConfig, false);
+    };
+
+    /**
+     * Binary sensors based on alarm booleans
+     * @param {*} zone 
+     * @param {*} i 
+     * @param {*} type 
+     * @param {*} device_class 
+     * @param {*} statusProperty 
+     * @param {*} topic 
+     * @param {*} defaultOn 
+     * @returns 
+     */
+    var configBinarySensors = function (zone, index, type, device_class, statusProperty, topic, defaultOn) {
+        var payload = "";
+        const zoneId = zone.id;
+        if (!reset) {
+            var zoneName = config.hadiscovery.zoneName;
+            if (!zoneName) {
+                zoneName = "Zone";
+            }
+            var value_template = `{{ '${config.payloads.sensorOn}' if value_json.${statusProperty} else '${config.payloads.sensorOff}' }}`;
+            if (defaultOn) {
+                value_template = `{{  '${config.payloads.sensorOff}' if value_json.${statusProperty} else '${config.payloads.sensorOn}' }}`;
+            }
+
+            const stateTopic = _getTopic(config.topics.sensors.zone.state, {
+                zoneId: zoneId
+            });
+
+            payload = {
+                name: type + " " + zoneName + " " + zone.id + " " + zone.name,
+                availability_topic: config.topics.availability,
+                'device_class': device_class,
+                value_template: value_template,
+                payload_on: config.payloads.sensorOn,
+                payload_off: config.payloads.sensorOff,
+                json_attributes_topic: stateTopic,
+                json_attributes_template: `{{ value_json | tojson }}`,
+                state_topic: stateTopic,
+                unique_id: ("alarm_zone_" + zone.id + "_" + type).toLowerCase(),
+                device: deviceConfig,
+                qos: config.topics.sensors.sensors_qos
+            };
         }
         return {
-            topic: _getTopic(config.hadiscovery.topics.sensorConfig, {
-                zoneId: zone.id
+            topic: _getTopic(topic, {
+                zoneId: zoneId
             }),
             payload
         };
@@ -121,22 +198,33 @@ module.exports = function (config, zonesToConfig, reset) {
         };
     };
 
-    var configSwitchBypass = function (zone, i) {
+    /**
+     * Bypass switch
+     * @param {*} zone 
+     * @param {*} i 
+     * @returns 
+     */
+    var configSwitchBypass = function (zone, index) {
         var zoneName = config.hadiscovery.zoneName || "Zone";
         var bypassName = config.hadiscovery.bypass.name || "Bypass";
         var payload = "";
+        const zoneId = zone.id;
         if (!reset) {
+            const stateTopic = _getTopic(config.topics.sensors.zone.state, {
+                zoneId: zoneId
+            });
+
             payload = {
                 name: bypassName + " " + zoneName + " " + zone.id + " " + zone.name,
                 availability_topic: config.topics.availability,
-                state_topic: config.topics.sensors.state,
-                value_template: "{{ '1' if value_json[" + i + "].bypass else '0' }}",
+                state_topic: stateTopic,
+                value_template: `{{ '${config.payloads.sensorOn}' if value_json.bypass else '${config.payloads.sensorOff}' }}`,
                 payload_on: config.payloads.sensorOn,
                 payload_off: config.payloads.sensorOff,
                 command_topic: _getTopic(config.topics.alarm.bypass, {
-                    zoneId: zone.id
+                    zoneId: zoneId
                 }),
-                unique_id: "alarm_bypass_zone_" + zone.id,
+                unique_id: "alarm_bypass_zone_" + zoneId,
                 icon: config.hadiscovery.bypass.icon,
                 device: deviceConfig,
                 qos: config.topics.sensors.sensors_qos
@@ -144,7 +232,7 @@ module.exports = function (config, zonesToConfig, reset) {
         }
         return {
             topic: _getTopic(config.hadiscovery.topics.bypassConfig, {
-                zoneId: zone.id
+                zoneId: zoneId
             }),
             payload
         };
@@ -267,6 +355,16 @@ module.exports = function (config, zonesToConfig, reset) {
         };
     };
 
+
+    function configCleanup(zone, topic) {
+        return {
+            topic: _getTopic(topic, {
+                zoneId: zone.id
+            }),
+            payload: ""
+        };
+    }
+
     this.createMessages = function () {
 
         var messages = [];
@@ -286,10 +384,18 @@ module.exports = function (config, zonesToConfig, reset) {
                 }
             }
 
-
+            //cleanup old topics structures
+            if (reset) {
+                messages.push(configCleanup(zone, "${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config"));
+                messages.push(configCleanup(zone, "${discoveryPrefix}/sensor/ialarm${zoneId}/battery/config"));
+                //messages.push(configCleanup(zone, "${discoveryPrefix}/sensor/${zoneId}/battery/config"));
+            }
 
             //binary sensors
-            messages.push(configSensor(zone, i));
+            messages.push(configSensorFault(zone, i));
+            messages.push(configSensorBattery(zone, i));
+            messages.push(configSensorAlarm(zone, i));
+            messages.push(configSensorConnectivity(zone, i));
 
             //bypass switches
             messages.push(configSwitchBypass(zone, i));
@@ -307,4 +413,5 @@ module.exports = function (config, zonesToConfig, reset) {
         messages.push(configSensorEvents());
         return messages;
     };
+
 }
