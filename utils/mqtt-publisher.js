@@ -142,7 +142,7 @@ module.exports = function (config) {
     var _publish = function (topic, data, options) {
 
         if (_sameData(topic, data)) {
-            console.log(topic + " - not publishing...unchanged");
+            console.debug(topic + " - not publishing...unchanged");
             return false;
         }
 
@@ -375,11 +375,11 @@ module.exports = function (config) {
         _publish(m.topic, m.payload);
     }
 
-    this.publishHomeAssistantMqttDiscovery = function (zones, on) {
+    this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
 
         //Reset of 40 zones
         const iAlarmHaDiscovery = require('./mqtt-hadiscovery');
-        var messages = new iAlarmHaDiscovery(config, zones, true).createMessages();
+        var messages = new iAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages();
         for (let index = 0; index < messages.length; index++) {
             const m = messages[index];
             _publishAndLog(m.topic, m.payload, { retain: true });
@@ -389,7 +389,7 @@ module.exports = function (config) {
             //let's wait HA processes all the entity reset, then submit again the discovered entity
             setTimeout(function () {
                 //mqtt discovery messages to publish
-                var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
+                var messages = new iAlarmHaDiscovery(config, zones, false, deviceInfo).createMessages();
                 for (let index = 0; index < messages.length; index++) {
                     const m = messages[index];
                     _publishAndLog(m.topic, m.payload, { retain: true });//config

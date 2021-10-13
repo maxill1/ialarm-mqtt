@@ -75,6 +75,7 @@ try {
         //default file
         config = require('../config.json');
         //merge main nodes
+        config.name = hassos.name;
         config.server = hassos.server;
         config.mqtt = hassos.mqtt;
 

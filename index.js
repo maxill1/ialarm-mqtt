@@ -11,6 +11,7 @@ module.exports = (config) => {
     const publisher = new iAlarmPublisher(config);
 
     var zonesCache = {};
+    var deviceInfo = {};
 
 
     function newAlarm() {
@@ -60,15 +61,24 @@ module.exports = (config) => {
             zonesCache = { zones: {}, caching: true };
         }
 
-        //initial zone info fetch
-        newAlarm().getZoneInfo().then(function (response) {
-            var info = "got " + Object.keys(response).length + " zones info";
-            console.log(info);
-            //remove empty or disabled zones
-            zonesCache.zones = removeEmptyZones(response);
-            zonesCache.caching = false;
-            initCallback();
+        //fetching alarm info
+        newAlarm().getNet().then(function (network) {
+            console.log(network);
+            deviceInfo = network;
+
+            //initial zone info fetch
+            newAlarm().getZoneInfo().then(function (response) {
+                var info = "got " + Object.keys(response).length + " zones info";
+                console.log(info);
+                //remove empty or disabled zones
+                zonesCache.zones = removeEmptyZones(response);
+                zonesCache.caching = false;
+                initCallback();
+            }, handleError).catch(handleError);
+
         }, handleError).catch(handleError);
+
+
     }
 
     /**
@@ -217,9 +227,9 @@ module.exports = (config) => {
         newAlarm().bypassZone(zoneNumber, bypass).then(publishStateAndFetchEvents, handleError).catch(handleError);
     }
 
-    function discovery(enabled) {
+    function discovery(enabled, deviceInfo) {
         //home assistant mqtt discovery (if not enabled it will reset all /config topics)
-        publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled);
+        publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled, deviceInfo);
         if (!enabled) {
             console.log("Home assistant discovery disabled (empty config.hadiscovery)");
         }
@@ -253,7 +263,7 @@ module.exports = (config) => {
             publisher.connectAndSubscribe(commandHandler);
 
             //if enabled
-            discovery(config.hadiscovery.enabled);
+            discovery(config.hadiscovery.enabled, deviceInfo);
 
             //alarm and sensor status
             setInterval(function () {
