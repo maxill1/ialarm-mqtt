@@ -1,0 +1,130 @@
+server:
+  host: 192.168.1.81
+  port: 18034
+  username: admin
+  password: password
+  zones: 40
+  polling_status: 5000
+  polling_events: 10000
+mqtt:
+  host: 192.168.1.82
+  port: "1883"
+  username: admin
+  password: password
+  clientId: ialarm-mqtt
+  cache: 5m
+  retain: true
+verbose: false
+name: ""
+topics:
+  availability: ialarm/alarm/availability
+  error: ialarm/alarm/error
+  alarm:
+    command: ialarm/alarm/set
+    state: ialarm/alarm/state
+    event: ialarm/alarm/event
+    bypass: ialarm/alarm/zone/${zoneId}/bypass
+    discovery: ialarm/alarm/discovery
+    resetCache: ialarm/alarm/resetCache
+    configStatus: ialarm/alarm/configStatus
+  sensors:
+    topicType: state
+    state: ialarm/sensors/state
+    zone:
+      state: ialarm/sensors/zone_${zoneId}
+      alarm: ialarm/sensors/zone_${zoneId}/alarm
+      active: ialarm/sensors/zone_${zoneId}/wirelessLoss
+      lowBattery: ialarm/sensors/zone_${zoneId}/lowbat
+      fault: ialarm/sensors/zone_${zoneId}/fault
+payloads:
+  alarmAvailable: online
+  alarmNotvailable: offline
+  alarmDecoder:
+    armAway:
+      - armAway
+      - armedAway
+      - armed_away
+      - arm_away
+      - AA
+      - AwayArm
+    armHome:
+      - armHome
+      - armedHome
+      - armed_home
+      - arm_home
+      - SA
+      - HomeArm
+      - StayArm
+      - armStay
+      - armedStay
+      - arm_stay
+      - armed_stay
+    disarm:
+      - disarm
+      - disarmed
+      - D
+    cancel:
+      - cancel
+      - canceled
+      - C
+    triggered:
+      - trigger
+      - triggered
+      - T
+  alarm:
+    armAway: armed_away
+    armHome: armed_home
+    disarm: disarmed
+    cancel: cancel
+    triggered: triggered
+  sensorOn: "1"
+  sensorOff: "0"
+hadiscovery:
+  enabled: true
+  discoveryPrefix: homeassistant
+  topics:
+    alarmConfig: ${discoveryPrefix}/alarm_control_panel/ialarm/config
+    eventsConfig: ${discoveryPrefix}/sensor/ialarm/events/config
+    sensorConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config
+    sensorBatteryConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config
+    sensorAlarmConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config
+    sensorConnectivityConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/connectivity/config
+    bypassConfig: ${discoveryPrefix}/switch/ialarm/${zoneId}/config
+    clearCacheConfig: ${discoveryPrefix}/switch/ialarm/clear_cache/config
+    clearDiscoveryConfig: ${discoveryPrefix}/switch/ialarm/clear_discovery/config
+    clearTriggeredConfig: ${discoveryPrefix}/switch/ialarm/clear_triggered/config
+  zoneName: Zone
+  alarm_qos: 2
+  sensors_qos: 0
+  code: ""
+  zones:
+    "0":
+      device_class: safety
+    "1":
+      device_class: door
+    "2":
+      device_class: window
+    "3":
+      device_class: motion
+    "4":
+      device_class: safety
+    "5":
+      device_class: gas
+    "6":
+      device_class: smoke
+    "7":
+      device_class: lock
+    problem:
+      zone bypass: safety
+      zone fault: problem
+      wireless detector low battery: battery
+      wireless detector loss: connectivity
+    default:
+      device_class: safety
+  events:
+    name: last event
+    icon: mdi:message-alert
+  bypass:
+    name: Bypass
+    icon: mdi:lock-open
+zones: []

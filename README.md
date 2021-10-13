@@ -16,7 +16,7 @@ via npx, npm install -g or docker
 https://github.com/maxill1/ialarm-mqtt/wiki/Installation
 
 ## Configuration
-edit [config.json](config.json) and adjust "mqtt" and "server" settings according to your need:
+edit [config.yaml](templates/tmpl.config.yaml) and adjust "mqtt" and "server" settings according to your need:
 https://github.com/maxill1/ialarm-mqtt/wiki/Configuration
 
 ## Home assistant integration
