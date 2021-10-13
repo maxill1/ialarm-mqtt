@@ -129,7 +129,6 @@ try {
         _checkConfig(config, ['topics', 'alarm', 'configStatus'], 0, "ialarm/alarm/configStatus");
         _checkConfig(config, ['topics', 'sensors', 'topicType'], 0, "state");
         _checkConfig(config, ['topics', 'sensors', 'state'], 0, "ialarm/sensors/state");
-        _checkConfig(config, ['topics', 'sensors', 'sensors_qos'], 0, 0);
         _checkConfig(config, ['topics', 'sensors', 'zone', 'state'], 0, "ialarm/sensors/zone_${zoneId}");
         _checkConfig(config, ['topics', 'sensors', 'zone', 'alarm'], 0, "ialarm/sensors/zone_${zoneId}/alarm");
         _checkConfig(config, ['topics', 'sensors', 'zone', 'active'], 0, "ialarm/sensors/zone_${zoneId}/wirelessLoss");
@@ -161,9 +160,10 @@ try {
         _checkConfig(config, ['hadiscovery', 'topics', 'clearCacheConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_cache/config");
         _checkConfig(config, ['hadiscovery', 'topics', 'clearDiscoveryConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_discovery/config");
         _checkConfig(config, ['hadiscovery', 'topics', 'clearTriggeredConfig'], 0, "${discoveryPrefix}/switch/ialarm/clear_triggered/config");
-        _checkConfig(config, ['hadiscovery', 'topics', 'alarm_qos'], 0, 2);
-        _checkConfig(config, ['hadiscovery', 'topics', 'sensors_qos'], 0, 0);
         _checkConfig(config, ['hadiscovery', 'zoneName'], 0, "Zone");
+        //fix backward compatibility for multiple alarm_qos and sensors_qos config positions...
+        _checkConfig(config, ['hadiscovery', 'alarm_qos'], 0, config.topics.alarm_qos || (config.topics.alarm && config.topics.alarm.alarm_qos) || 2);
+        _checkConfig(config, ['hadiscovery', 'sensors_qos'], 0, config.topics.sensors_qos || (config.topics.sensors && config.topics.sensors.sensors_qos) || 0);
 
         ialarmMqtt(config)
     } else {
