@@ -1,4 +1,5 @@
 {
+    "name": "iAlarm",
     "server": {
         "host": "192.168.1.81",
         "port": 18034,
@@ -7,7 +8,7 @@
         "zones": [
             17
         ],
-        "polling_status": 30000,
+        "polling_status": 5000,
         "polling_events": 10000
     },
     "mqtt": {
@@ -22,7 +23,7 @@
     "code": null,
     "zoneName": "Zone",
     "events": {
-        "name": "iAlarm last event",
+        "name": "last event",
         "icon": "mdi:message-alert"
     },
     "bypass": {
