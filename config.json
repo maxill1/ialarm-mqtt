@@ -1,5 +1,6 @@
 {
     "verbose": false,
+    "name": "",
     "server": {
         "host": "192.168.1.81",
         "port": 18034,
@@ -7,7 +8,7 @@
         "password": "password",
         "zones": 40,
         "polling": {
-            "status": 30000,
+            "status": 5000,
             "events": 10000
         }
     },
@@ -23,7 +24,6 @@
     "topics": {
         "availability": "ialarm/alarm/availability",
         "error": "ialarm/alarm/error",
-        "alarm_qos": 2,
         "alarm": {
             "state": "ialarm/alarm/state",
             "command": "ialarm/alarm/set",
@@ -35,7 +35,6 @@
         "sensors": {
             "topicType": "state",
             "state": "ialarm/sensors/state",
-            "sensors_qos": 0,
             "zone": {
                 "alarm": "ialarm/sensors/${zoneId}/alarm",
                 "active": "ialarm/sensors/${zoneId}/active",
@@ -96,6 +95,8 @@
         "sensorOff": "0"
     },
     "hadiscovery": {
+        "alarm_qos": 2,
+        "sensors_qos": 0,
         "enabled": true,
         "discoveryPrefix": "homeassistant",
         "topics": {
@@ -139,7 +140,7 @@
             }
         },
         "events": {
-            "name": "iAlarm last event",
+            "name": "last event",
             "icon": "mdi:message-alert"
         },
         "bypass": {

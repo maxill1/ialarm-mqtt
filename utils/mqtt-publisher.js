@@ -142,7 +142,7 @@ module.exports = function (config) {
     var _publish = function (topic, data, options) {
 
         if (_sameData(topic, data)) {
-            console.log(topic + " - not publishing...unchanged");
+            console.debug(topic + " - not publishing...unchanged");
             return false;
         }
 
@@ -307,11 +307,21 @@ module.exports = function (config) {
 
         //one payload with all sensors data (sensors attrs)
         if (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'state') {
+            //legacy state: array of zones
             _publishAndLog(config.topics.sensors.state, zones);
         }
-        //multiple payload with single sensor data
-        if (zones && zones.length > 0 && (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'zone')) {
 
+        //multiple payload with single sensor data based on zone.id to avoid misplaced index
+        if (config.hadiscovery) {
+            for (var i = 0; i < configuredZones; i++) {
+                var zone = zones[i];
+                //full zone status (only if changed)
+                _publishAndLog(config.topics.sensors.zone.state.replace("${zoneId}", zone.id), zone);
+            }
+        }
+
+        //publishing also as object based on zone.id to avoid misplaced index
+        if (zones.length > 0 && (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'zone')) {
             console.log("sending topic '" + config.topics.sensors.zone.alarm + "' for " + configuredZones + " zones");
             console.log("sending topic '" + config.topics.sensors.zone.active + "' for " + configuredZones + " zones");
             console.log("sending topic '" + config.topics.sensors.zone.lowBattery + "' for " + configuredZones + " zones");
@@ -323,10 +333,14 @@ module.exports = function (config) {
                 if (config.verbose) {
                     pub = _publishAndLog;
                 }
-                pub(config.topics.sensors.zone.alarm.replace("${zoneId}", zone.id), zone.alarm ? config.payloads.sensorOn : config.payloads.sensorOff);
-                pub(config.topics.sensors.zone.active.replace("${zoneId}", zone.id), zone.bypass ? config.payloads.sensorOn : config.payloads.sensorOff);
-                pub(config.topics.sensors.zone.lowBattery.replace("${zoneId}", zone.id), zone.lowbat ? config.payloads.sensorOn : config.payloads.sensorOff);
-                pub(config.topics.sensors.zone.fault.replace("${zoneId}", zone.id), zone.fault ? config.payloads.sensorOn : config.payloads.sensorOff);
+
+                //single zone properties
+                if (publishZonesProperties) {
+                    pub(config.topics.sensors.zone.alarm.replace("${zoneId}", zone.id), zone.alarm ? config.payloads.sensorOn : config.payloads.sensorOff);
+                    pub(config.topics.sensors.zone.active.replace("${zoneId}", zone.id), zone.bypass ? config.payloads.sensorOn : config.payloads.sensorOff);
+                    pub(config.topics.sensors.zone.lowBattery.replace("${zoneId}", zone.id), zone.lowbat ? config.payloads.sensorOn : config.payloads.sensorOff);
+                    pub(config.topics.sensors.zone.fault.replace("${zoneId}", zone.id), zone.fault ? config.payloads.sensorOn : config.payloads.sensorOff);
+                }
             }
         }
     }
@@ -361,11 +375,11 @@ module.exports = function (config) {
         _publish(m.topic, m.payload);
     }
 
-    this.publishHomeAssistantMqttDiscovery = function (zones, on) {
+    this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
 
         //Reset of 40 zones
         const iAlarmHaDiscovery = require('./mqtt-hadiscovery');
-        var messages = new iAlarmHaDiscovery(config, zones, true).createMessages();
+        var messages = new iAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages();
         for (let index = 0; index < messages.length; index++) {
             const m = messages[index];
             _publishAndLog(m.topic, m.payload, { retain: true });
@@ -375,7 +389,7 @@ module.exports = function (config) {
             //let's wait HA processes all the entity reset, then submit again the discovered entity
             setTimeout(function () {
                 //mqtt discovery messages to publish
-                var messages = new iAlarmHaDiscovery(config, zones, false).createMessages();
+                var messages = new iAlarmHaDiscovery(config, zones, false, deviceInfo).createMessages();
                 for (let index = 0; index < messages.length; index++) {
                     const m = messages[index];
                     _publishAndLog(m.topic, m.payload, { retain: true });//config
