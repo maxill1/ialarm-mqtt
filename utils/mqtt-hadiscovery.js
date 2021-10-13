@@ -159,7 +159,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 state_topic: stateTopic,
                 unique_id: ("alarm_zone_" + zone.id + "_" + type).toLowerCase(),
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -189,7 +189,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 unique_id: "ialarm_events",
                 icon: config.hadiscovery.events.icon,
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -227,7 +227,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 unique_id: "alarm_bypass_zone_" + zoneId,
                 icon: config.hadiscovery.bypass.icon,
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -258,7 +258,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 unique_id: "alarm_clear_cache",
                 icon: 'mdi:reload-alert',
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -287,7 +287,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 unique_id: "alarm_clear_discovery",
                 icon: 'mdi:refresh',
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -318,7 +318,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 unique_id: "alarm_cancel_trigger",
                 icon: 'mdi:alarm-light',
                 device: deviceConfig,
-                qos: config.topics.sensors.sensors_qos
+                qos: config.hadiscovery.sensors_qos
             };
         }
         return {
@@ -342,7 +342,7 @@ module.exports = function (config, zonesToConfig, reset) {
                 payload_arm_away: config.payloads.alarm.armAway,
                 payload_available: config.payloads.alarmAvailable,
                 payload_not_available: config.payloads.alarmNotvailable,
-                qos: config.topics.alarm_qos
+                qos: config.hadiscovery.alarm_qos
             };
             //optional
             if (config.hadiscovery.code) {
