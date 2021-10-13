@@ -24,13 +24,7 @@ module.exports = (config) => {
     }
 
     function handleError(e) {
-        let error = e;
-        if (e.message) {
-            error = e.message;
-        }
-        let msg = "error " + error;
-        console.log(msg);
-        console.log(e);
+        let msg = "error " + JSON.stringify(e);
         publisher.publishError(msg);
     }
 
