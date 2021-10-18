@@ -196,7 +196,7 @@ function initDefaults (config, configFile) {
       }
     })
     _checkConfig(config, ['hadiscovery', 'events'], 0, {
-      name: 'last event',
+      // name: 'last event', //default is "alarm last event"
       icon: 'mdi:message-alert'
     })
     _checkConfig(config, ['hadiscovery', 'bypass'], 0, {
