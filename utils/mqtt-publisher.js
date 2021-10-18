@@ -166,7 +166,7 @@ module.exports = function (config) {
     }
   }
 
-  this.connectAndSubscribe = function (alarmCommands) {
+  this.connectAndSubscribe = function (alarmCommands, onConnected, onDisconnected) {
     const clientId = config.mqtt.clientId || 'ialarm-mqtt-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     console.log('connection to MQTT broker: ', config.mqtt.host + ':' + config.mqtt.port)
     client = mqtt.connect('mqtt://' + config.mqtt.host + ':' + config.mqtt.port, {
@@ -191,6 +191,8 @@ module.exports = function (config) {
         }
         _resetCache()
       })
+
+      onConnected()
     })
 
     client.on('message', function (topic, message) {
@@ -278,8 +280,10 @@ module.exports = function (config) {
     })
 
     client.on('error', function (err) {
-      // message is Buffer
-      console.log(err)
+      console.log(`Error connecting to MQTT broker: ${err && err.message}`)
+      if (onDisconnected) {
+        onDisconnected()
+      }
       client.end()
     })
   }
@@ -370,18 +374,19 @@ module.exports = function (config) {
 
   this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
     // Reset of 40 zones
-    const iAlarmHaDiscovery = require('./mqtt-hadiscovery')
-    const messages = new iAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages()
+    const IAlarmHaDiscovery = require('./mqtt-hadiscovery')
+    const messages = new IAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages()
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index]
       _publishAndLog(m.topic, m.payload, { retain: true })
     }
 
     if (on) {
+      console.log('Setting up Home assistant discovery...')
       // let's wait HA processes all the entity reset, then submit again the discovered entity
       setTimeout(function () {
         // mqtt discovery messages to publish
-        const messages = new iAlarmHaDiscovery(config, zones, false, deviceInfo).createMessages()
+        const messages = new IAlarmHaDiscovery(config, zones, false, deviceInfo).createMessages()
         for (let index = 0; index < messages.length; index++) {
           const m = messages[index]
           _publishAndLog(m.topic, m.payload, { retain: true })// config

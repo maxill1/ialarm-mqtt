@@ -1,6 +1,5 @@
-const iAlarm = require('ialarm')
-const iAlarmPublisher = require('./utils/mqtt-publisher')
-const configHandler = require('./utils/config-handler')
+const IAlarm = require('ialarm')
+const IAlarmPublisher = require('./utils/mqtt-publisher')
 
 module.exports = (config) => {
   if (!config) {
@@ -8,12 +7,12 @@ module.exports = (config) => {
     process.exit(1)
   }
 
-  const publisher = new iAlarmPublisher(config)
+  const publisher = new IAlarmPublisher(config)
 
   let zonesCache = {}
 
   function newAlarm () {
-    return new iAlarm(
+    return new IAlarm(
       config.server.host,
       config.server.port,
       config.server.username,
@@ -22,7 +21,7 @@ module.exports = (config) => {
   }
 
   function handleError (e) {
-    const msg = 'error ' + JSON.stringify(e)
+    const msg = e.message ? e : { message: JSON.stringify(e) }
     publisher.publishError(msg)
   }
 
@@ -34,39 +33,6 @@ module.exports = (config) => {
     }
     return undefined
   };
-
-  function initZoneCache (initCallback) {
-    console.log('Loading zone cache...')
-
-    const host = config.server.host
-    const port = config.server.port
-    const username = config.server.username
-    const password = config.server.password
-
-    if (!host || !port || !username || !password) {
-      throw new Error('Missing required configuration')
-    }
-
-    if (!zonesCache) {
-      zonesCache = { zones: {}, caching: true }
-    }
-
-    // fetching alarm info
-    newAlarm().getNet().then(function (network) {
-      console.log(network)
-      config.deviceInfo = network
-
-      // initial zone info fetch
-      newAlarm().getZoneInfo().then(function (response) {
-        const info = 'got ' + Object.keys(response).length + ' zones info'
-        console.log(info)
-        // remove empty or disabled zones
-        zonesCache.zones = removeEmptyZones(response)
-        zonesCache.caching = false
-        initCallback()
-      }, handleError).catch(handleError)
-    }, handleError).catch(handleError)
-  }
 
   /**
      * removes empty or disabled zones
@@ -81,40 +47,32 @@ module.exports = (config) => {
      * Read and publis state
      */
   function readStatus () {
-    try {
-      newAlarm().getStatus().then(publishFullState, handleError).catch(handleError)
-    } catch (e) {
-      handleError(e)
-    }
+    newAlarm().getStatus(zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined).then(publishFullState).catch(handleError)
   }
 
   /**
      * Read logs and publish new events
      */
   function readEvents () {
-    try {
-      newAlarm().getEvents().then(function (events) {
-        const lastEvent = events && events.length > 1 ? events[0] : undefined
-        if (lastEvent) {
-          const zoneCache = getZoneCache(lastEvent.zone)
-          if (zoneCache) {
-            lastEvent.name = zoneCache.name
-            lastEvent.type = zoneCache.type
-          }
-
-          let description = lastEvent.zone
-          if (lastEvent.name) {
-            description = description + ' ' + lastEvent.name
-          }
-          lastEvent.description = lastEvent.message + ' (zone ' + description + ')'
+    newAlarm().getEvents().then(function (events) {
+      const lastEvent = events && events.length > 1 ? events[0] : undefined
+      if (lastEvent) {
+        const zoneCache = getZoneCache(lastEvent.zone)
+        if (zoneCache) {
+          lastEvent.name = zoneCache.name
+          lastEvent.type = zoneCache.type
         }
 
-        // publish only if changed or empty
-        publisher.publishEvent(lastEvent)
-      }, handleError).catch(handleError)
-    } catch (e) {
-      handleError(e)
-    }
+        let description = lastEvent.zone
+        if (lastEvent.name) {
+          description = description + ' ' + lastEvent.name
+        }
+        lastEvent.description = lastEvent.message + ' (zone ' + description + ')'
+      }
+
+      // publish only if changed or empty
+      publisher.publishEvent(lastEvent)
+    }, handleError).catch(handleError)
   }
 
   /**
@@ -219,38 +177,111 @@ module.exports = (config) => {
     readStatus()
   }
 
+  /**
+   * mqtt init
+   */
+  function startMqtt (onConnected, onDisconnected) {
+    // mqtt init
+    const commandHandler = {}
+    commandHandler.armDisarm = armDisarm
+    commandHandler.bypassZone = bypassZone
+    commandHandler.discovery = discovery
+    commandHandler.resetCache = resetCache
+    publisher.connectAndSubscribe(
+      commandHandler,
+      // connected
+      onConnected,
+      // disconnected
+      onDisconnected)
+  }
+
+  /**
+   * set up intervals
+   * @returns
+   */
+  function startPolling () {
+    console.log('Status polling every ', config.server.polling_status, ' ms')
+    console.log('Events polling every ', config.server.polling_events, ' ms')
+
+    // alarm and sensor status
+    const intervals = []
+    intervals.push(setInterval(function () {
+      publisher.publishAvailable()
+
+      readStatus()
+    }, config.server.polling_status))
+
+    // event messages
+    intervals.push(setInterval(function () {
+      readEvents()
+    }, config.server.polling_events))
+
+    return intervals
+  }
+
   // start loop
   function start () {
     console.log('Starting up...')
 
-    console.log('Status polling every ', config.server.polling_status, ' ms')
-    console.log('Events polling every ', config.server.polling_events, ' ms')
+    const host = config.server.host
+    const port = config.server.port
+    const username = config.server.username
+    const password = config.server.password
 
-    // load zone names
-    initZoneCache(function () {
-      // mqtt init
-      const commandHandler = {}
-      commandHandler.armDisarm = armDisarm
-      commandHandler.bypassZone = bypassZone
-      commandHandler.discovery = discovery
-      commandHandler.resetCache = resetCache
-      publisher.connectAndSubscribe(commandHandler)
+    if (!host || !port || !username || !password) {
+      throw new Error('Missing required configuration')
+    }
 
-      // if enabled
-      discovery(config.hadiscovery.enabled)
+    if (!zonesCache) {
+      zonesCache = { zones: {}, caching: true }
+    }
 
-      // alarm and sensor status
-      setInterval(function () {
-        publisher.publishAvailable()
+    let pollings = []
+    // mqtt connection first
+    startMqtt(
+      // on connection start tcp polling
+      () => {
+        console.log('Setting up first TCP connection to retrieve mac address...')
+        // fetching alarm info
+        newAlarm().getNet().then(function (network) {
+          config.deviceInfo = network
+          console.log(`First connection OK: connected to alarm panel ${JSON.stringify(config.deviceInfo)}`)
 
-        readStatus()
-      }, config.server.polling_status)
+          console.log('Retrieving zone info ...')
+          // initial zone info fetch
+          return newAlarm().getZoneInfo()
+        }).then(function (response) {
+          const info = 'got ' + Object.keys(response).length + ' zones info'
+          console.log(info)
+          // remove empty or disabled zones
+          zonesCache.zones = removeEmptyZones(response)
+          zonesCache.caching = false
 
-      // event messages
-      setInterval(function () {
-        readEvents()
-      }, config.server.polling_events)
+          // home assistant discovery (if enabled)
+          discovery(config.hadiscovery.enabled)
+
+          // we are ready to start tcp polling
+          pollings = startPolling()
+        }).catch((error) => {
+          console.log(`Error starting up: ${error && error.message}`)
+          // end polling and close app
+          stop(pollings)
+        })
+      },
+      // on disconnection end polling and close app
+      () => {
+        stop(pollings)
+      }
+    )
+  }
+
+  function stop (intervals) {
+    console.log('Stopping...')
+    intervals.forEach(item => {
+      clearInterval(item)
     })
+    // exit ialarm-mqtt
+    process.exit(1)
   }
 
   start()
