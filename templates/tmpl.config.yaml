@@ -11,7 +11,7 @@ mqtt:
   port: "1883"
   username: admin
   password: password
-  clientId: ialarm-mqtt
+  #clientId: ialarm-mqtt #optional, will be auto generated
   cache: 5m
   retain: true
 verbose: false

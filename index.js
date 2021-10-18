@@ -241,6 +241,11 @@ module.exports = (config) => {
     startMqtt(
       // on connection start tcp polling
       () => {
+        // reset timers
+        if (pollings.length > 0) {
+          clearInterval(pollings)
+        }
+
         console.log('Setting up first TCP connection to retrieve mac address...')
         // fetching alarm info
         newAlarm().getNet().then(function (network) {

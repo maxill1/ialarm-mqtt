@@ -51,7 +51,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['mqtt', 'host'])
     _checkConfig(config, ['mqtt', 'username'])
     _checkConfig(config, ['mqtt', 'password'])
-    _checkConfig(config, ['mqtt', 'clientId'], 0, 'ialarm-mqtt')
+    _checkConfig(config, ['mqtt', 'clientId'], 0, '')
     _checkConfig(config, ['mqtt', 'cache'], 0, '5m')
     _checkConfig(config, ['mqtt', 'retain'], 0, true)
     _checkConfig(config, ['topics'], 0, {})

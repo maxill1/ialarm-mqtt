@@ -168,7 +168,7 @@ module.exports = function (config) {
 
   this.connectAndSubscribe = function (alarmCommands, onConnected, onDisconnected) {
     const clientId = config.mqtt.clientId || 'ialarm-mqtt-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    console.log('connection to MQTT broker: ', config.mqtt.host + ':' + config.mqtt.port)
+    console.log(`MQTT connecting to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
     client = mqtt.connect('mqtt://' + config.mqtt.host + ':' + config.mqtt.port, {
       username: config.mqtt.username,
       password: config.mqtt.password,
@@ -177,14 +177,14 @@ module.exports = function (config) {
     })
 
     client.on('connect', function () {
-      console.log('connected...')
+      console.log(`MQTT connected to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
       const topicsToSubscribe = [
         config.topics.alarm.command,
         config.topics.alarm.bypass.replace('${zoneId}', '+'),
         config.topics.alarm.discovery,
         config.topics.alarm.resetCache
       ]
-      console.log('subscribing to ' + JSON.stringify(topicsToSubscribe))
+      console.log(`subscribing to ${JSON.stringify(topicsToSubscribe)}`)
       client.subscribe(topicsToSubscribe, function (err) {
         if (err) {
           console.log('Error subscribing' + err.toString())
