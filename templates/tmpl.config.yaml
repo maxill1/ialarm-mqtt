@@ -1,0 +1,31 @@
+server:
+  host: 192.168.1.81
+  port: 18034
+  username: admin
+  password: password
+  zones: 40
+  polling_status: 5000
+  polling_events: 10000
+mqtt:
+  host: 192.168.1.82
+  port: "1883"
+  username: admin
+  password: password
+  #clientId: ialarm-mqtt #optional, will be auto generated
+  cache: 5m
+  retain: true
+verbose: false
+name: ""
+hadiscovery:
+  enabled: true
+  zoneName: Zona
+  alarm_qos: 2
+  sensors_qos: 0
+#  code: "1234"
+# zones: 
+#   - number: 1
+#     device_class: door
+#   - number: 16
+#     contactType: NO
+#     device_class: moisture
+#     statusProperty: fault

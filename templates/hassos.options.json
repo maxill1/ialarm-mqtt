@@ -21,7 +21,7 @@
         "retain": true
     },
     "code": null,
-    "zoneName": "Zone",
+    "zoneName": "Zona",
     "events": {
         "name": "last event",
         "icon": "mdi:message-alert"
@@ -35,7 +35,7 @@
             "number": "39",
             "contactType": "NC",
             "device_class": "moisture",
-            "statusProperty": "open"
+            "statusProperty": "fault"
         }
     ]
 }
