@@ -289,10 +289,18 @@ module.exports = {
       if (!configPath.endsWith('/')) {
         configPath = configPath + '/'
       }
-      console.log('Searching external config.json in path', configPath)
-      // loading external file
-      configFile = configPath + 'config.json'
-      config = require(configFile)
+      try {
+        console.log('Searching external config.yaml in path', configPath)
+        // loading external file
+        configFile = configPath + 'config.yaml'
+        const file = fs.readFileSync(configFile, 'utf8')
+        config = YAML.parse(file)
+      } catch (error) {
+        console.log('Searching external config.json in path', configPath)
+        // loading external file
+        configFile = configPath + 'config.json'
+        config = require(configFile)
+      }
     }
     // init missing config
     return initDefaults(config, configFile)
