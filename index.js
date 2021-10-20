@@ -1,6 +1,7 @@
 const IAlarm = require('ialarm')
 const constants = require('ialarm/src/constants')
 const IAlarmPublisher = require('./utils/mqtt-publisher')
+const IAlarmStatusDecoder = require('ialarm/src/status-decoder')()
 
 module.exports = (config) => {
   if (!config) {
@@ -11,6 +12,7 @@ module.exports = (config) => {
   const publisher = new IAlarmPublisher(config)
 
   let zonesCache = {}
+  const pollings = []
 
   function newAlarm () {
     return new IAlarm(
@@ -23,6 +25,8 @@ module.exports = (config) => {
 
   function handleError (e) {
     const msg = e.message ? e : { message: JSON.stringify(e) }
+    console.error(e)
+    console.log('Publishing error: ', e)
     publisher.publishError(msg)
   }
 
@@ -36,26 +40,56 @@ module.exports = (config) => {
   };
 
   /**
-     * removes empty or disabled zones
-     * @param {*} zones
-     * @returns
-     */
+   * removes empty or disabled zones
+   * @param {*} zones
+   * @returns
+   */
   function removeEmptyZones (zones) {
     return zones.filter(z => z.typeId > 0 && z.name !== '')
   }
 
   /**
-     * Read and publis state
-     */
+   * Read and publis state
+   */
   function readStatus () {
-    newAlarm().getStatus(zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined).then(publishFullState).catch(handleError)
+    const statusFunction = config.server.areas > 1 ? 'getStatusArea' : 'getStatusAlarm'
+
+    const client = newAlarm()
+
+    let status = {
+      status_1: ''
+    }
+
+    // alarm/area status
+    client[statusFunction]()
+      .then(function (statusResponse) {
+        status = statusResponse.status_1 ? statusResponse : { status_1: statusResponse.status }
+        // sensor status with names, type, etc
+
+        // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+        const mergedStatus = Object.keys(status).reduce(function (tot, current) {
+          const areaStatus = status[current]
+          if (areaStatus && IAlarmStatusDecoder.isArmed(areaStatus)) {
+            return areaStatus
+          }
+          return tot
+        }, status.status_1)
+
+        return client.getZoneStatus(mergedStatus, zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined)
+      })
+      .then(function (zonesResponse) {
+        // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+        status.status_1 = zonesResponse.status === 'TRIGGERED' ? zonesResponse.status : status.status_1
+
+        publishFullState(status, zonesResponse.zones || [])
+      }).catch(handleError)
   }
 
   /**
-     * Read logs and publish new events
-     */
+   * Read logs and publish new events
+   */
   function readEvents () {
-    newAlarm().getEvents().then(function (events) {
+    newAlarm().getLastEvents().then(function (events) {
       const lastEvent = events && events.length > 1 ? events[0] : undefined
       if (lastEvent) {
         const zoneCache = getZoneCache(lastEvent.zone)
@@ -73,21 +107,14 @@ module.exports = (config) => {
 
       // publish only if changed or empty
       publisher.publishEvent(lastEvent)
-    }, handleError).catch(handleError)
+    }).catch(handleError)
   }
 
   /**
      * publish received state and fetch new events
      * @param {*} param0
      */
-  function publishFullState (data) {
-    if (data.status.event === 'response') {
-      console.log(data)
-    }
-
-    // we want to publish emtpy statues
-    const { status, zones } = data || {}
-
+  function publishFullState (status, zones) {
     // console.log(`New alarm status: ${status}`);
     // alarm
     publisher.publishStateIAlarm(status)
@@ -118,15 +145,20 @@ module.exports = (config) => {
      * @param {*} param0
      */
   function publishStateAndFetchEvents (data) {
-    publishFullState(data)
+    readStatus()
 
     // notify last event
     setTimeout(function () {
       readEvents()
-    }, 500)
+    }, 1000)
+
+    // reschedule active timers
+    pollings.forEach(element => {
+      element.refresh()
+    })
   }
 
-  function armDisarm (commandType) {
+  function armDisarm (commandType, numArea) {
     const alarm = newAlarm()
     if (!commandType || !alarm[commandType]) {
       console.log(`Received invalid alarm command: ${commandType}`)
@@ -135,7 +167,7 @@ module.exports = (config) => {
       // force publish on next round
       publisher.resetCache()
       // command
-      alarm[commandType]().then(publishStateAndFetchEvents, handleError).catch(handleError)
+      alarm[commandType](numArea).then(publishStateAndFetchEvents).catch(handleError)
 
       if (config.debug) {
         console.log('DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm.' + commandType + '()')
@@ -159,7 +191,7 @@ module.exports = (config) => {
 
     // force publish on next round
     publisher.resetCache()
-    newAlarm().bypassZone(zoneNumber, bypass).then(publishStateAndFetchEvents, handleError).catch(handleError)
+    newAlarm().bypassZone(zoneNumber, bypass).then(publishStateAndFetchEvents).catch(handleError)
   }
 
   function discovery (enabled) {
@@ -197,7 +229,7 @@ module.exports = (config) => {
   }
 
   /**
-   * set up intervals
+   * set up pollings
    * @returns
    */
   function startPolling () {
@@ -205,19 +237,16 @@ module.exports = (config) => {
     console.log('Events polling every ', config.server.polling_events, ' ms')
 
     // alarm and sensor status
-    const intervals = []
-    intervals.push(setInterval(function () {
+    pollings.push(setInterval(function () {
       publisher.publishAvailable()
 
       readStatus()
     }, config.server.polling_status))
 
     // event messages
-    intervals.push(setInterval(function () {
+    pollings.push(setInterval(function () {
       readEvents()
     }, config.server.polling_events))
-
-    return intervals
   }
 
   // start loop
@@ -237,7 +266,6 @@ module.exports = (config) => {
       zonesCache = { zones: {}, caching: true }
     }
 
-    let pollings = []
     // mqtt connection first
     startMqtt(
       // on connection start tcp polling
@@ -267,7 +295,7 @@ module.exports = (config) => {
           discovery(config.hadiscovery.enabled)
 
           // we are ready to start tcp polling
-          pollings = startPolling()
+          startPolling()
         }).catch((error) => {
           console.log(`Error starting up: ${error && error.message}`)
           // end polling and close app
@@ -281,9 +309,9 @@ module.exports = (config) => {
     )
   }
 
-  function stop (intervals) {
+  function stop () {
     console.log('Stopping...')
-    intervals.forEach(item => {
+    pollings && pollings.forEach(item => {
       clearInterval(item)
     })
     // exit ialarm-mqtt

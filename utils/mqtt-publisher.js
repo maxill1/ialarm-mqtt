@@ -179,7 +179,7 @@ module.exports = function (config) {
     client.on('connect', function () {
       console.log(`MQTT connected to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
       const topicsToSubscribe = [
-        config.topics.alarm.command,
+        config.topics.alarm.command.replace('${areaId}', '+'),
         config.topics.alarm.bypass.replace('${zoneId}', '+'),
         config.topics.alarm.discovery,
         config.topics.alarm.resetCache
@@ -204,15 +204,7 @@ module.exports = function (config) {
       }
       console.log("received topic '" + topic + "' : ", command)
 
-      // arm/disarm topic
-      if (topic === config.topics.alarm.command) {
-        const ialarmCommand = _decodeStatus(command)
-        console.log('Alarm command: ' + ialarmCommand + ' (' + command + ')')
-        if (alarmCommands.armDisarm) {
-          alarmCommands.armDisarm(ialarmCommand)
-          console.log('Executed: ' + ialarmCommand + ' (' + command + ')')
-        }
-      } else if (topic === config.topics.alarm.discovery) { // any payload
+      if (topic === config.topics.alarm.discovery) { // any payload
         console.log('Requested new HA discovery...')
         if (alarmCommands.discovery && command) {
           const on = command && (command.toLowerCase() === 'on' || command === 1 || command == 'true')
@@ -233,13 +225,28 @@ module.exports = function (config) {
           cancel: 'OFF'
         })
       } else {
-        // bypass topic
-        // var topicRegex = new RegExp(/ialarm\/alarm\/zone\/(\d{1,2})\/bypass/gm);
-        // "ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
-        const strRegex = config.topics.alarm.bypass
+        // arm/disarm topic
+        const armRegex = new RegExp(config.topics.alarm.command
           .replace('/', '/')
-          .replace('${zoneId}', '(\\d{1,2})') // .replace("+", "(\\d{1,2})")
-        const topicRegex = new RegExp(strRegex, 'gm')
+          .replace('${areaId}', '(\\d{1,2})'), 'gm')
+        const armMatch = armRegex.exec(topic)
+        if (armMatch) {
+          const numArea = armMatch[1]
+          console.log('Alarm arm/disarm/cancel: area ' + numArea + ' (' + command + ')')
+          const ialarmCommand = _decodeStatus(command)
+          console.log('Alarm command: ' + ialarmCommand + ' (' + command + ')')
+          if (alarmCommands.armDisarm) {
+            alarmCommands.armDisarm(ialarmCommand, numArea)
+            console.log('Executed: ' + ialarmCommand + ' (' + command + ')')
+            return
+          }
+        }
+
+        // bypass topic
+        // "ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
+        const topicRegex = new RegExp(config.topics.alarm.bypass
+          .replace('/', '/')
+          .replace('${zoneId}', '(\\d{1,2})'), 'gm')
         const match = topicRegex.exec(topic)
         if (match) {
           const zoneNumber = match[1]
@@ -343,12 +350,15 @@ module.exports = function (config) {
   }
 
   this.publishStateIAlarm = function (status) {
-    const m = {}
-    m.topic = config.topics.alarm.state
-    // decode status
-    const alarmState = _decodeStatus(status)
-    m.payload = (config.payloads.alarm && config.payloads.alarm[alarmState]) || status
-    _publishAndLog(m.topic, m.payload)
+    if (status) {
+      for (const statusNumber in status) {
+        // decode status
+        const areaStatus = status[statusNumber]
+        const alarmState = _decodeStatus(areaStatus)
+        status[statusNumber] = (config.payloads.alarm && config.payloads.alarm[alarmState]) || areaStatus
+      }
+    }
+    _publishAndLog(config.topics.alarm.state, status)
   }
 
   this.publishAvailable = function () {
