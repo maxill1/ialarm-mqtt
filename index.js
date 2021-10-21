@@ -1,9 +1,12 @@
 const IAlarm = require('ialarm')
 const constants = require('ialarm/src/constants')
+const IAlarmLogger = require('ialarm/src/logger')
 const IAlarmPublisher = require('./utils/mqtt-publisher')
 const IAlarmStatusDecoder = require('ialarm/src/status-decoder')()
 
 module.exports = (config) => {
+  const logger = IAlarmLogger(config.debug ? 'debug' : 'info')
+
   if (!config) {
     console.error('Please provide a valid config.json')
     process.exit(1)
@@ -20,13 +23,13 @@ module.exports = (config) => {
       config.server.port,
       config.server.username,
       config.server.password,
-      config.server.zones)
+      config.server.zones,
+      config.verbose ? 'debug' : 'info')
   }
 
   function handleError (e) {
     const msg = e.message ? e : { message: JSON.stringify(e) }
-    console.error(e)
-    console.log('Publishing error: ', e)
+    logger.error('Publishing error: ', e)
     publisher.publishError(msg)
   }
 
@@ -115,7 +118,6 @@ module.exports = (config) => {
      * @param {*} param0
      */
   function publishFullState (status, zones) {
-    // console.log(`New alarm status: ${status}`);
     // alarm
     publisher.publishStateIAlarm(status)
 
@@ -161,17 +163,17 @@ module.exports = (config) => {
   function armDisarm (commandType, numArea) {
     const alarm = newAlarm()
     if (!commandType || !alarm[commandType]) {
-      console.log(`Received invalid alarm command: ${commandType}`)
+      logger.error(`Received invalid alarm command: ${commandType}`)
     } else {
-      console.log(`Received alarm command: ${commandType}`)
+      logger.info(`Received alarm command: ${commandType}`)
       // force publish on next round
       publisher.resetCache()
       // command
       alarm[commandType](numArea).then(publishStateAndFetchEvents).catch(handleError)
 
       if (config.debug) {
-        console.log('DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm.' + commandType + '()')
-        console.log('DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm.' + commandType + '()')
+        logger.info('DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm.' + commandType + '()')
+        logger.info('DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm.' + commandType + '()')
         publisher.publishStateIAlarm(commandType)
       }
     }
@@ -182,12 +184,9 @@ module.exports = (config) => {
       console.error('bypassZone: received invalid zone number: ' + zoneNumber)
       return
     }
+    bypass = bypass || false
 
-    if (!bypass) {
-      bypass = false
-    }
-
-    console.log('Received bypass ' + bypass + ' for zone number ' + zoneNumber)
+    logger.info('Received bypass ' + bypass + ' for zone number ' + zoneNumber)
 
     // force publish on next round
     publisher.resetCache()
@@ -198,12 +197,12 @@ module.exports = (config) => {
     // home assistant mqtt discovery (if not enabled it will reset all /config topics)
     publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled, config.deviceInfo)
     if (!enabled) {
-      console.log('Home assistant discovery disabled (empty config.hadiscovery)')
+      logger.warn('Home assistant discovery disabled (empty config.hadiscovery)')
     }
   }
 
   function resetCache () {
-    console.log('iAlarm cache cleared')
+    logger.warn('iAlarm cache cleared')
     publisher.resetCache()
 
     // sending fresh data
@@ -233,8 +232,8 @@ module.exports = (config) => {
    * @returns
    */
   function startPolling () {
-    console.log('Status polling every ', config.server.polling_status, ' ms')
-    console.log('Events polling every ', config.server.polling_events, ' ms')
+    logger.info('Status polling every ', config.server.polling_status, ' ms')
+    logger.info('Events polling every ', config.server.polling_events, ' ms')
 
     // alarm and sensor status
     pollings.push(setInterval(function () {
@@ -251,7 +250,7 @@ module.exports = (config) => {
 
   // start loop
   function start () {
-    console.log('Starting up...')
+    logger.info('Starting up...')
 
     const host = config.server.host
     const port = config.server.port
@@ -275,18 +274,17 @@ module.exports = (config) => {
           clearInterval(pollings)
         }
 
-        console.log('Setting up first TCP connection to retrieve mac address...')
+        logger.info('Setting up first TCP connection to retrieve mac address...')
         // fetching alarm info
         newAlarm().getNet().then(function (network) {
           config.deviceInfo = network
-          console.log(`First connection OK: connected to alarm panel ${JSON.stringify(config.deviceInfo)}`)
+          logger.info(`First connection OK: connected to alarm panel ${JSON.stringify(config.deviceInfo)}`)
 
-          console.log('Retrieving zone info ...')
+          logger.info('Retrieving zone info ...')
           // initial zone info fetch
           return newAlarm().getZoneInfo()
         }).then(function (response) {
-          const info = 'got ' + Object.keys(response).length + ' zones info'
-          console.log(info)
+          logger.info(`got ${Object.keys(response).length} ' zones info'`)
           // remove empty or disabled zones
           zonesCache.zones = removeEmptyZones(response)
           zonesCache.caching = false
@@ -297,7 +295,7 @@ module.exports = (config) => {
           // we are ready to start tcp polling
           startPolling()
         }).catch((error) => {
-          console.log(`Error starting up: ${error && error.message}`)
+          logger.error(`Error starting up: ${error && error.message}`)
           // end polling and close app
           stop(pollings)
         })
@@ -310,7 +308,7 @@ module.exports = (config) => {
   }
 
   function stop () {
-    console.log('Stopping...')
+    logger.info('Stopping...')
     pollings && pollings.forEach(item => {
       clearInterval(item)
     })

@@ -5,6 +5,8 @@ const configHandler = require('./config-handler')
 const constants = require('ialarm/src/constants')
 
 module.exports = function (config, zonesToConfig, reset, deviceInfo) {
+  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+
   const alarmId = `alarm_mqtt_${(deviceInfo && deviceInfo.mac && deviceInfo.mac.split(':').join('')) || 'meian'}`
 
   const deviceConfig = {
@@ -381,7 +383,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
         zone = zonesToConfig[i]
         // disabled/not in use zone
         if (zone.typeId === 0) {
-          console.log(`Ignoring unused zone ${zone.id}`)
+          logger.log('debug', `Ignoring unused zone ${zone.id}`)
           continue
         }
       }

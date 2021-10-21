@@ -1,6 +1,8 @@
 const mqtt = require('mqtt')
 
 module.exports = function (config) {
+  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+
   let client
 
   const _cache = {
@@ -20,7 +22,7 @@ module.exports = function (config) {
         } else if (expr.endsWith('d')) {
           molt = 60000 * 60 * 24
         } else {
-          console.log('Using default cache: 5m')
+          logger.info('Using default cache: 5m')
           // default 5 min
           return 5 * 60000
         }
@@ -64,7 +66,7 @@ module.exports = function (config) {
         }
       }
     } catch (error) {
-      console.log('error')
+      logger.error('error')
     }
     return status
   }
@@ -85,7 +87,7 @@ module.exports = function (config) {
       dataLog = data
     }
     if (_publish(topic, data, options)) {
-      console.log("sending topic '" + topic + "' : " + dataLog)
+      logger.info("sending topic '" + topic + "' : " + dataLog)
     }
   }
 
@@ -141,7 +143,6 @@ module.exports = function (config) {
 
   const _publish = function (topic, data, options) {
     if (_sameData(topic, data)) {
-      // console.debug(topic + " - not publishing...unchanged");
       return false
     }
 
@@ -157,18 +158,18 @@ module.exports = function (config) {
       // cache the original data, ignoring config
       if (!topic.endsWith('/config')) {
         _cache.data[topic] = { payload: data, lastChecked: data.lastChecked || new Date() }
-        console.log('Caching ' + topic + ' until ' + _cacheExpireDate(_cache.data[topic].lastChecked))
+        logger.info('Caching ' + topic + ' until ' + _cacheExpireDate(_cache.data[topic].lastChecked))
       }
       return true
     } else {
-      console.log(topic + ' - error publishing...not connected')
+      logger.error(topic + ' - error publishing...not connected')
       return false
     }
   }
 
   this.connectAndSubscribe = function (alarmCommands, onConnected, onDisconnected) {
     const clientId = config.mqtt.clientId || 'ialarm-mqtt-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    console.log(`MQTT connecting to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
+    logger.info(`MQTT connecting to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
     client = mqtt.connect('mqtt://' + config.mqtt.host + ':' + config.mqtt.port, {
       username: config.mqtt.username,
       password: config.mqtt.password,
@@ -177,17 +178,17 @@ module.exports = function (config) {
     })
 
     client.on('connect', function () {
-      console.log(`MQTT connected to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
+      logger.info(`MQTT connected to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
       const topicsToSubscribe = [
         config.topics.alarm.command.replace('${areaId}', '+'),
         config.topics.alarm.bypass.replace('${zoneId}', '+'),
         config.topics.alarm.discovery,
         config.topics.alarm.resetCache
       ]
-      console.log(`subscribing to ${JSON.stringify(topicsToSubscribe)}`)
+      logger.info(`subscribing to ${JSON.stringify(topicsToSubscribe)}`)
       client.subscribe(topicsToSubscribe, function (err) {
         if (err) {
-          console.log('Error subscribing' + err.toString())
+          logger.error('Error subscribing' + err.toString())
         }
         _resetCache()
       })
@@ -202,10 +203,10 @@ module.exports = function (config) {
       } catch (error) {
         command = message
       }
-      console.log("received topic '" + topic + "' : ", command)
+      logger.info("received topic '" + topic + "' : ", command)
 
       if (topic === config.topics.alarm.discovery) { // any payload
-        console.log('Requested new HA discovery...')
+        logger.info('Requested new HA discovery...')
         if (alarmCommands.discovery && command) {
           const on = command && (command.toLowerCase() === 'on' || command === 1 || command == 'true')
           alarmCommands.discovery(on)
@@ -232,12 +233,11 @@ module.exports = function (config) {
         const armMatch = armRegex.exec(topic)
         if (armMatch) {
           const numArea = armMatch[1]
-          console.log('Alarm arm/disarm/cancel: area ' + numArea + ' (' + command + ')')
+          logger.info('Alarm arm/disarm/cancel: area ' + numArea + ' (' + command + ')')
           const ialarmCommand = _decodeStatus(command)
-          console.log('Alarm command: ' + ialarmCommand + ' (' + command + ')')
           if (alarmCommands.armDisarm) {
             alarmCommands.armDisarm(ialarmCommand, numArea)
-            console.log('Executed: ' + ialarmCommand + ' (' + command + ')')
+            logger.info('Executed: ' + ialarmCommand + ' (' + command + ')')
             return
           }
         }
@@ -250,7 +250,7 @@ module.exports = function (config) {
         const match = topicRegex.exec(topic)
         if (match) {
           const zoneNumber = match[1]
-          console.log('Alarm bypass: zone ' + zoneNumber + ' (' + command + ')')
+          logger.info('Alarm bypass: zone ' + zoneNumber + ' (' + command + ')')
 
           const accepted = ['1', '0', 'true', 'false', 'on', 'off']
           let knownCommand = false
@@ -262,7 +262,7 @@ module.exports = function (config) {
             }
           }
           if (!knownCommand) {
-            console.log(
+            logger.error(
               'Alarm bypass zone ' +
                             zoneNumber +
                             ' ignored invalid command: ' +
@@ -275,9 +275,9 @@ module.exports = function (config) {
                         command.toLowerCase() === 'true' ||
                         command.toLowerCase() === 'on'
           if (bypass) {
-            console.log('Alarm bypass zone ' + zoneNumber)
+            logger.info('Alarm bypass zone ' + zoneNumber)
           } else {
-            console.log('Alarm bypass removed from zone ' + zoneNumber)
+            logger.info('Alarm bypass removed from zone ' + zoneNumber)
           }
           if (alarmCommands.bypassZone) {
             alarmCommands.bypassZone(zoneNumber, bypass)
@@ -287,7 +287,7 @@ module.exports = function (config) {
     })
 
     client.on('error', function (err) {
-      console.log(`Error connecting to MQTT broker: ${err && err.message}`)
+      logger.error(`Error connecting to MQTT broker: ${err && err.message}`)
       if (onDisconnected) {
         onDisconnected()
       }
@@ -297,13 +297,13 @@ module.exports = function (config) {
 
   this.publishStateSensor = function (zones) {
     if (!zones) {
-      console.log('No zone found to publish')
+      logger.info('No zone found to publish')
       return
     }
 
     if (!config.topics.sensors) {
       // don't publish sensors
-      console.log("config file has no 'config.topics.sensors' configured. Skipping.")
+      logger.warn("config file has no 'config.topics.sensors' configured. Skipping.")
       return
     }
 
@@ -317,8 +317,8 @@ module.exports = function (config) {
 
     // multiple payload with single sensor data based on zone.id to avoid misplaced index
     if (config.hadiscovery) {
-      for (var i = 0; i < configuredZones; i++) {
-        var zone = zones[i]
+      for (let i = 0; i < configuredZones; i++) {
+        const zone = zones[i]
         // full zone status (only if changed)
         _publishAndLog(config.topics.sensors.zone.state.replace('${zoneId}', zone.id), zone)
       }
@@ -326,13 +326,13 @@ module.exports = function (config) {
 
     // publishing also as object based on zone.id to avoid misplaced index
     if (zones.length > 0 && (!config.topics.sensors.topicType || config.topics.sensors.topicType === 'zone')) {
-      console.log("sending topic '" + config.topics.sensors.zone.alarm + "' for " + configuredZones + ' zones')
-      console.log("sending topic '" + config.topics.sensors.zone.active + "' for " + configuredZones + ' zones')
-      console.log("sending topic '" + config.topics.sensors.zone.lowBattery + "' for " + configuredZones + ' zones')
-      console.log("sending topic '" + config.topics.sensors.zone.fault + "' for " + configuredZones + ' zones')
+      logger.debug("sending topic '" + config.topics.sensors.zone.alarm + "' for " + configuredZones + ' zones')
+      logger.debug("sending topic '" + config.topics.sensors.zone.active + "' for " + configuredZones + ' zones')
+      logger.debug("sending topic '" + config.topics.sensors.zone.lowBattery + "' for " + configuredZones + ' zones')
+      logger.debug("sending topic '" + config.topics.sensors.zone.fault + "' for " + configuredZones + ' zones')
 
-      for (var i = 0; i < configuredZones; i++) {
-        var zone = zones[i]
+      for (let i = 0; i < configuredZones; i++) {
+        const zone = zones[i]
         let pub = _publish
         if (config.verbose) {
           pub = _publishAndLog
@@ -392,7 +392,7 @@ module.exports = function (config) {
     }
 
     if (on) {
-      console.log('Setting up Home assistant discovery...')
+      logger.info('Setting up Home assistant discovery...')
       // let's wait HA processes all the entity reset, then submit again the discovered entity
       setTimeout(function () {
         // mqtt discovery messages to publish

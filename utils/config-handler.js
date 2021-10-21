@@ -7,6 +7,8 @@ const path = require('path')
 * Add to config all default values if missing
 */
 function initDefaults (config, configFile) {
+  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+
   /**
        * Check or init a config value
       * @param {*} object
@@ -27,7 +29,7 @@ function initDefaults (config, configFile) {
     if (!exists) {
       if (defaultValue !== undefined && index === paths.length - 1) {
         // create default
-        console.log(`Config.json value not specified on ${configFile} using default '${defaultValue}' on ${JSON.stringify(paths)}`)
+        logger.warn(`Config.json value not specified on ${configFile} using default '${defaultValue}' on ${JSON.stringify(paths)}`)
         object[key] = defaultValue
       } else {
         throw new Error(`subscribe error: ${configFile} is missing ${paths[index]} on ${JSON.stringify(paths)}. See: ${JSON.stringify(config.topics)}`)
@@ -240,9 +242,10 @@ module.exports = {
      * @returns
      */
   readHassOsOptions: function (optionsFile) {
+    const logger = require('ialarm/src/logger')('info')
     // merge default config.json with options.json
 
-    console.log('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
+    logger.info('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
     const hassos = require(optionsFile)
 
     // default file
@@ -272,17 +275,19 @@ module.exports = {
   * @param {*} configFile
   */
   readConfigFile: function (configFile) {
+    const logger = require('ialarm/src/logger')('info')
+
     let config = {}
 
     let configPath = configFile
     // if is a json file
     if (configPath.endsWith('.json')) {
       configFile = configPath
-      console.log('Found external json configuration file ', configPath)
+      logger.info('Found external json configuration file ', configPath)
       config = require(configFile)
     } else if (configPath.endsWith('.yaml')) {
       configFile = configPath
-      console.log('Found external yaml configuration file', configPath)
+      logger.info('Found external yaml configuration file', configPath)
       const file = fs.readFileSync(configFile, 'utf8')
       config = YAML.parse(file)
     } else {
@@ -291,13 +296,13 @@ module.exports = {
         configPath = configPath + '/'
       }
       try {
-        console.log('Searching external config.yaml in path', configPath)
+        logger.info('Searching external config.yaml in path', configPath)
         // loading external file
         configFile = configPath + 'config.yaml'
         const file = fs.readFileSync(configFile, 'utf8')
         config = YAML.parse(file)
       } catch (error) {
-        console.log('Searching external config.json in path', configPath)
+        logger.info('Searching external config.json in path', configPath)
         // loading external file
         configFile = configPath + 'config.json'
         config = require(configFile)
@@ -308,6 +313,7 @@ module.exports = {
   },
 
   generateDefaultYaml: function (templateFile) {
+    const logger = require('ialarm/src/logger')('info')
     const config = initDefaults(templateFile ? require(templateFile) : require('../templates/tmpl.config.json'), templateFile || 'test.json')
 
     const doc = new YAML.Document()
@@ -322,11 +328,11 @@ module.exports = {
 
     fs.writeFile(`${baseDir}/templates/full.config.yaml`, yamlContent, 'utf8', function (err) {
       if (err) {
-        console.log('An error occured while writing Yaml to File.')
-        return console.log(err)
+        logger.error('An error occured while writing Yaml to File.')
+        return
       }
 
-      console.log('Yaml file generated')
+      logger.info('Yaml file generated')
     })
 
     return config
