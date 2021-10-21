@@ -373,7 +373,7 @@ module.exports = function (config) {
   }
 
   this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
-    // Reset of 40 zones
+    // Reset of 128 zones
     const IAlarmHaDiscovery = require('./mqtt-hadiscovery')
     const messages = new IAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages()
     for (let index = 0; index < messages.length; index++) {

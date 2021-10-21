@@ -2,6 +2,7 @@
 
 const pjson = require('../package.json')
 const configHandler = require('./config-handler')
+const constants = require('ialarm/src/constants')
 
 module.exports = function (config, zonesToConfig, reset, deviceInfo) {
   const alarmId = `alarm_mqtt_${(deviceInfo && deviceInfo.mac && deviceInfo.mac.split(':').join('')) || 'meian'}`
@@ -354,7 +355,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
   this.createMessages = function () {
     const messages = []
-    const zoneSize = reset ? 40 : zonesToConfig.length || 40
+    const zoneSize = reset ? constants.maxZones : zonesToConfig.length || constants.maxZones
     for (let i = 0; i < zoneSize; i++) {
       let zone
       if (reset) {

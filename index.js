@@ -1,4 +1,5 @@
 const IAlarm = require('ialarm')
+const constants = require('ialarm/src/constants')
 const IAlarmPublisher = require('./utils/mqtt-publisher')
 
 module.exports = (config) => {
@@ -145,7 +146,7 @@ module.exports = (config) => {
   }
 
   function bypassZone (zoneNumber, bypass) {
-    if (!zoneNumber || zoneNumber > 40) {
+    if (!zoneNumber || zoneNumber > constants.maxZones) {
       console.error('bypassZone: received invalid zone number: ' + zoneNumber)
       return
     }
