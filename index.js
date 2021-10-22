@@ -28,9 +28,14 @@ module.exports = (config) => {
   }
 
   function handleError (e) {
-    const msg = e.message ? e : { message: JSON.stringify(e) }
-    logger.error('Publishing error: ', e)
-    publisher.publishError(msg)
+    let msg
+    if (typeof e === 'string') {
+      msg = e
+    } else if (e.message) {
+      msg = e.message
+    }
+    const stack = e.stack ? JSON.stringify(e.stack) : ''
+    publisher.publishError(msg, stack)
   }
 
   function getZoneCache (id) {
@@ -140,6 +145,9 @@ module.exports = (config) => {
 
     // publish sensors
     publisher.publishStateSensor(zones)
+
+    // clears errors
+    // publisher.publishError()
   }
 
   /**
@@ -232,6 +240,8 @@ module.exports = (config) => {
    * @returns
    */
   function startPolling () {
+    // TODO disable single polling
+
     logger.info('Status polling every ', config.server.polling_status, ' ms')
     logger.info('Events polling every ', config.server.polling_events, ' ms')
 

@@ -134,6 +134,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['hadiscovery', 'topics'], 0, {})
     _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, '${discoveryPrefix}/alarm_control_panel/ialarm_${areaId}/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, '${discoveryPrefix}/sensor/ialarm/events/config')
+    _checkConfig(config, ['hadiscovery', 'topics', 'errorConfig'], 0, '${discoveryPrefix}/sensor/ialarm/error/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorBatteryConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorAlarmConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config')

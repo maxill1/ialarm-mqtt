@@ -368,11 +368,16 @@ module.exports = function (config) {
     _publish(m.topic, m.payload)
   }
 
-  this.publishError = function (error) {
-    const m = {}
-    m.topic = config.topics.error
-    m.payload = error
-    _publish(m.topic, m.payload)
+  this.publishError = function (errorMessage, stack) {
+    if (errorMessage) {
+      logger.error(`Publishing error: ${errorMessage}`, stack)
+    }
+    _publish(config.topics.error, {
+      message: errorMessage,
+      stack: stack,
+      date: new Date()
+
+    })
   }
 
   this.publishEvent = function (data) {

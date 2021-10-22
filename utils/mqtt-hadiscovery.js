@@ -192,6 +192,32 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
   }
 
   /**
+     * Error log
+     * @returns
+     */
+  const configSensorError = function () {
+    let payload = ''
+    if (!reset) {
+      payload = {
+        name: `${deviceConfig.name} comunication error`,
+        availability_topic: config.topics.availability,
+        state_topic: config.topics.error,
+        value_template: '{{value_json.message}}',
+        json_attributes_topic: config.topics.error,
+        json_attributes_template: '{{ value_json | tojson }}',
+        unique_id: `${alarmId}_comunication_error`,
+        icon: 'mdi:alert-circle',
+        device: deviceConfig,
+        qos: config.hadiscovery.sensors_qos
+      }
+    }
+    return {
+      topic: _getTopic(config.hadiscovery.topics.errorConfig),
+      payload
+    }
+  }
+
+  /**
      * Bypass switch
      * @param {*} zone
      * @param {*} i
@@ -419,6 +445,10 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
     // last event
     messages.push(configSensorEvents())
+
+    // errors
+    messages.push(configSensorError())
+
     return messages
   }
 }
