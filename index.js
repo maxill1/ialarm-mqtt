@@ -24,7 +24,8 @@ module.exports = (config) => {
       config.server.username,
       config.server.password,
       config.server.zones,
-      config.verbose ? 'debug' : 'info')
+      config.verbose ? 'debug' : 'info',
+      config.server.delay)
   }
 
   function handleError (e) {
@@ -301,6 +302,9 @@ module.exports = (config) => {
 
           // home assistant discovery (if enabled)
           discovery(config.hadiscovery.enabled)
+
+          // clean errors
+          publisher.publishError('OK')
 
           // we are ready to start tcp polling
           startPolling()
