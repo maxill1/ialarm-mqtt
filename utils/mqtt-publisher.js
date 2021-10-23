@@ -157,7 +157,7 @@ module.exports = function (config) {
       client.publish(topic, payload, options)
       // cache the original data, ignoring config
       if (!topic.endsWith('/config')) {
-        _cache.data[topic] = { payload: data, lastChecked: data.lastChecked || new Date() }
+        _cache.data[topic] = { payload: data, lastChecked: (data && data.lastChecked) || new Date() }
         logger.info('Caching ' + topic + ' until ' + _cacheExpireDate(_cache.data[topic].lastChecked))
       }
       return true
