@@ -98,8 +98,8 @@ module.exports = (config) => {
    * Read logs and publish new events
    */
   function readEvents () {
-    newAlarm().getLastEvents().then(function (events) {
-      const lastEvent = events && events.length > 1 ? events[0] : undefined
+    newAlarm().getLastEvents().then(function ({ logs }) {
+      const lastEvent = logs && logs.length > 1 ? logs[0] : undefined
       if (lastEvent) {
         const zoneCache = getZoneCache(lastEvent.zone)
         if (zoneCache) {
@@ -112,6 +112,8 @@ module.exports = (config) => {
           description = description + ' ' + lastEvent.name
         }
         lastEvent.description = lastEvent.message + ' (zone ' + description + ')'
+      } else {
+        logger.warning('Received no last event from alarm (logs is missing)...')
       }
 
       // publish only if changed or empty
