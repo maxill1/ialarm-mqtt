@@ -1,6 +1,7 @@
 const IAlarm = require('ialarm')
 const constants = require('ialarm/src/constants')
 const IAlarmLogger = require('ialarm/src/logger')
+const configHandler = require('./utils/config-handler')
 const IAlarmPublisher = require('./utils/mqtt-publisher')
 const IAlarmStatusDecoder = require('ialarm/src/status-decoder')()
 
@@ -61,7 +62,9 @@ module.exports = (config) => {
    * Read and publis state
    */
   function readStatus () {
-    const statusFunction = config.server.areas > 1 ? 'getStatusArea' : 'getStatusAlarm'
+    if (!configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors'])) {
+      return
+    }
 
     const client = newAlarm()
 
@@ -69,35 +72,57 @@ module.exports = (config) => {
       status_1: ''
     }
 
+    let statusPromise
     // alarm/area status
-    client[statusFunction]()
-      .then(function (statusResponse) {
-        status = statusResponse.status_1 ? statusResponse : { status_1: statusResponse.status }
-        // sensor status with names, type, etc
-
-        // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
-        const mergedStatus = Object.keys(status).reduce(function (tot, current) {
-          const areaStatus = status[current]
-          if (areaStatus && IAlarmStatusDecoder.isArmed(areaStatus)) {
-            return areaStatus
-          }
-          return tot
-        }, status.status_1)
-
-        return client.getZoneStatus(mergedStatus, zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined)
+    if (configHandler.isFeatureEnabled(config, 'armDisarm')) {
+      const statusFunction = config.server.areas > 1 ? 'getStatusArea' : 'getStatusAlarm'
+      statusPromise = client[statusFunction]()
+    } else {
+      // fake status
+      statusPromise = new Promise((resolve) => {
+        resolve({
+          status: '' // not relevant, we are just polling sensors
+        })
       })
-      .then(function (zonesResponse) {
-        // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
-        status.status_1 = zonesResponse.status === 'TRIGGERED' ? zonesResponse.status : status.status_1
+    }
 
-        publishFullState(status, zonesResponse.zones || [])
-      }).catch(handleError)
+    statusPromise.then(function (statusResponse) {
+      status = statusResponse.status_1 ? statusResponse : { status_1: statusResponse.status }
+
+      // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+      const mergedStatus = Object.keys(status).reduce(function (tot, current) {
+        const areaStatus = status[current]
+        if (areaStatus && IAlarmStatusDecoder.isArmed(areaStatus)) {
+          return areaStatus
+        }
+        return tot
+      }, status.status_1)
+
+      if (!configHandler.isFeatureEnabled(config, 'sensors')) {
+        return {
+        // 2
+          status: mergedStatus,
+          zones: []
+        }
+      }
+      // sensor status with names, type, etc
+      return client.getZoneStatus(mergedStatus, zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined)
+    }).then(function (zonesResponse) {
+      // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
+      status.status_1 = zonesResponse.status === 'TRIGGERED' ? zonesResponse.status : status.status_1
+
+      publishFullState(status, zonesResponse.zones || [])
+    }).catch(handleError)
   }
 
   /**
    * Read logs and publish new events
    */
   function readEvents () {
+    if (!configHandler.isFeatureEnabled(config, 'events')) {
+      return
+    }
+
     newAlarm().getLastEvents().then(function ({ logs }) {
       const lastEvent = logs && logs.length > 1 ? logs[0] : undefined
       if (lastEvent) {
@@ -172,6 +197,10 @@ module.exports = (config) => {
   }
 
   function armDisarm (commandType, numArea) {
+    if (!configHandler.isFeatureEnabled(config, 'armDisarm')) {
+      return
+    }
+
     const alarm = newAlarm()
     if (!commandType || !alarm[commandType]) {
       logger.error(`Received invalid alarm command: ${commandType}`)
@@ -191,6 +220,10 @@ module.exports = (config) => {
   }
 
   function bypassZone (zoneNumber, bypass) {
+    if (!configHandler.isFeatureEnabled(config, 'bypass')) {
+      return
+    }
+
     if (!zoneNumber || zoneNumber > constants.maxZones) {
       console.error('bypassZone: received invalid zone number: ' + zoneNumber)
       return
@@ -243,22 +276,26 @@ module.exports = (config) => {
    * @returns
    */
   function startPolling () {
-    // TODO disable single polling
-
-    logger.info('Status polling every ', config.server.polling_status, ' ms')
-    logger.info('Events polling every ', config.server.polling_events, ' ms')
-
     // alarm and sensor status
-    pollings.push(setInterval(function () {
-      publisher.publishAvailable()
-
-      readStatus()
-    }, config.server.polling_status))
+    if (configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors', 'bypass'])) {
+      logger.info('Status polling every ', config.server.polling_status, ' ms')
+      pollings.push(setInterval(function () {
+        publisher.publishAvailable()
+        readStatus()
+      }, config.server.polling_status))
+    } else {
+      logger.debug('Status disabled in config file')
+    }
 
     // event messages
-    pollings.push(setInterval(function () {
-      readEvents()
-    }, config.server.polling_events))
+    if (configHandler.isFeatureEnabled(config, 'events')) {
+      logger.info('Events polling every ', config.server.polling_events, ' ms')
+      pollings.push(setInterval(function () {
+        readEvents()
+      }, config.server.polling_events))
+    } else {
+      logger.debug('Events disabled in config file')
+    }
   }
 
   // start loop
@@ -294,8 +331,38 @@ module.exports = (config) => {
           logger.info(`First connection OK: connected to alarm panel ${JSON.stringify(config.deviceInfo)}`)
 
           logger.info('Retrieving zone info ...')
-          // initial zone info fetch
-          return newAlarm().getZoneInfo()
+
+          if (configHandler.isFeatureEnabled(config, 'zoneNames')) {
+            // initial zone info fetch
+            return newAlarm().getZoneInfo()
+          }
+          // zone names disabled, building them
+          const zoneNames = []
+          let zonesId = []
+          if (Array.isArray(config.server.zones)) {
+            zonesId = config.server.zones
+          } else {
+            for (let index = 0; index < config.server.zones; index++) {
+              const zoneNumber = index + 1
+              zonesId.push(zoneNumber)
+            }
+          }
+
+          for (let index = 0; index < zonesId.length; index++) {
+            const zoneNumber = zonesId[index]
+            zoneNames.push(
+              {
+                typeId: 2, // using Perimetrale as default
+                type: 'Perimetrale',
+                voiceId: 1,
+                voiceName: 'Fisso',
+                id: zoneNumber,
+                zone: zoneNumber,
+                name: 'Device'
+              }
+            )
+          }
+          return zoneNames
         }).then(function (response) {
           logger.info(`got ${Object.keys(response).length} ' zones info'`)
           // remove empty or disabled zones

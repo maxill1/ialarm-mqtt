@@ -1,4 +1,5 @@
 const mqtt = require('mqtt')
+const configHandler = require('./config-handler')
 
 module.exports = function (config) {
   const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
@@ -180,18 +181,29 @@ module.exports = function (config) {
     client.on('connect', function () {
       logger.info(`MQTT connected to broker ${config.mqtt.host}:${config.mqtt.port} with cliendId ${clientId}`)
       const topicsToSubscribe = [
-        config.topics.alarm.command.replace('${areaId}', '+'),
-        config.topics.alarm.bypass.replace('${zoneId}', '+'),
         config.topics.alarm.discovery,
         config.topics.alarm.resetCache
       ]
-      logger.info(`subscribing to ${JSON.stringify(topicsToSubscribe)}`)
-      client.subscribe(topicsToSubscribe, function (err) {
-        if (err) {
-          logger.error('Error subscribing' + err.toString())
-        }
-        _resetCache()
-      })
+      // arm/disarm/cancel
+      if (configHandler.isFeatureEnabled(config, 'armDisarm')) {
+        topicsToSubscribe.push(config.topics.alarm.command.replace('${areaId}', '+'))
+      }
+      // bypass
+      if (configHandler.isFeatureEnabled(config, 'bypass')) {
+        topicsToSubscribe.push(config.topics.alarm.bypass.replace('${zoneId}', '+'))
+      }
+
+      if (topicsToSubscribe.length > 0) {
+        logger.info(`subscribing to ${JSON.stringify(topicsToSubscribe)}`)
+        client.subscribe(topicsToSubscribe, function (err) {
+          if (err) {
+            logger.error('Error subscribing' + err.toString())
+          }
+          _resetCache()
+        })
+      } else {
+        logger.info('No topic to subscribe to')
+      }
 
       onConnected()
     })

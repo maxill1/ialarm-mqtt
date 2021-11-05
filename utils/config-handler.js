@@ -3,6 +3,8 @@ const YAML = require('yaml')
 const fs = require('fs')
 const path = require('path')
 
+const loggerBasic = require('ialarm/src/logger')('info')
+
 /**
 * Add to config all default values if missing
 */
@@ -51,6 +53,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['server', 'delay'], 0, 200)
     _checkConfig(config, ['server', 'polling_status'], 0, (config.server && config.server.polling && config.server.polling.status) || 5000)
     _checkConfig(config, ['server', 'polling_events'], 0, (config.server && config.server.polling && config.server.polling.events) || 10000)
+    _checkConfig(config, ['server', 'features'], 0, ['armDisarm', 'sensors', 'events', 'bypass', 'zoneNames'])
     _checkConfig(config, ['mqtt', 'port'])
     _checkConfig(config, ['mqtt', 'host'])
     _checkConfig(config, ['mqtt', 'username'])
@@ -244,10 +247,9 @@ module.exports = {
      * @returns
      */
   readHassOsOptions: function (optionsFile) {
-    const logger = require('ialarm/src/logger')('info')
     // merge default config.json with options.json
 
-    logger.info('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
+    loggerBasic.info('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
     const hassos = require(optionsFile)
 
     // default file
@@ -277,19 +279,17 @@ module.exports = {
   * @param {*} configFile
   */
   readConfigFile: function (configFile) {
-    const logger = require('ialarm/src/logger')('info')
-
     let config = {}
 
     let configPath = configFile
     // if is a json file
     if (configPath.endsWith('.json')) {
       configFile = configPath
-      logger.info('Found external json configuration file ', configPath)
+      loggerBasic.info('Found external json configuration file ', configPath)
       config = require(configFile)
     } else if (configPath.endsWith('.yaml')) {
       configFile = configPath
-      logger.info('Found external yaml configuration file', configPath)
+      loggerBasic.info('Found external yaml configuration file', configPath)
       const file = fs.readFileSync(configFile, 'utf8')
       config = YAML.parse(file)
     } else {
@@ -298,13 +298,13 @@ module.exports = {
         configPath = configPath + '/'
       }
       try {
-        logger.info('Searching external config.yaml in path', configPath)
+        loggerBasic.info('Searching external config.yaml in path', configPath)
         // loading external file
         configFile = configPath + 'config.yaml'
         const file = fs.readFileSync(configFile, 'utf8')
         config = YAML.parse(file)
       } catch (error) {
-        logger.info('Searching external config.json in path', configPath)
+        loggerBasic.info('Searching external config.json in path', configPath)
         // loading external file
         configFile = configPath + 'config.json'
         config = require(configFile)
@@ -315,7 +315,6 @@ module.exports = {
   },
 
   generateDefaultYaml: function (templateFile) {
-    const logger = require('ialarm/src/logger')('info')
     const config = initDefaults(templateFile ? require(templateFile) : require('../templates/tmpl.config.json'), templateFile || 'test.json')
 
     const doc = new YAML.Document()
@@ -330,11 +329,11 @@ module.exports = {
 
     fs.writeFile(`${baseDir}/templates/full.config.yaml`, yamlContent, 'utf8', function (err) {
       if (err) {
-        logger.error('An error occured while writing Yaml to File.')
+        loggerBasic.error('An error occured while writing Yaml to File.')
         return
       }
 
-      logger.info('Yaml file generated')
+      loggerBasic.info('Yaml file generated')
     })
 
     return config
@@ -362,6 +361,29 @@ module.exports = {
 
       return defaultConfig
     }
+  },
+  /**
+   * Check if feature is enabled in config
+   * @param {*} config
+   * @param {*} featureNames
+   * @returns
+   */
+  isFeatureEnabled: function (config, featureNames) {
+    if (!Array.isArray(featureNames)) {
+      if (config.server.features.includes(featureNames)) {
+        return true
+      }
+      loggerBasic.warn(`Feature ${featureNames} is disabled`)
+      return false
+    }
+    for (let index = 0; index < featureNames.length; index++) {
+      const element = featureNames[index]
+      if (config.server.features.includes(element)) {
+        return true
+      }
+    }
+    loggerBasic.warn(`Features ${JSON.stringify(featureNames)} are disabled`)
+    return false
   }
 
 }

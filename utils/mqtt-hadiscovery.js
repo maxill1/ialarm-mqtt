@@ -422,32 +422,40 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       }
 
       // binary sensors
-      messages.push(configSensorFault(zone, i))
-      messages.push(configSensorBattery(zone, i))
-      messages.push(configSensorAlarm(zone, i))
-      messages.push(configSensorConnectivity(zone, i))
+      if (reset || configHandler.isFeatureEnabled(config, 'sensors')) {
+        messages.push(configSensorFault(zone, i))
+        messages.push(configSensorBattery(zone, i))
+        messages.push(configSensorAlarm(zone, i))
+        messages.push(configSensorConnectivity(zone, i))
+      }
 
       // bypass switches
-      messages.push(configSwitchBypass(zone, i))
+      if (reset || configHandler.isFeatureEnabled(config, 'bypass')) {
+        messages.push(configSwitchBypass(zone, i))
+      }
     }
 
     // switch to clear cache and discovery configs
     messages.push(configSwitchClearCache())
     messages.push(configSwitchClearDiscovery())
 
-    // cancel alarm triggered ( TODO multiple switch for all areas?)
-    messages.push(configSwitchCancelTriggered(1))
+    // errors
+    messages.push(configSensorError())
 
-    // multiple alarm state for multiple area
-    for (let areaId = 1; areaId <= config.server.areas; areaId++) {
-      messages.push(configIAlarm(areaId))
+    if (reset || configHandler.isFeatureEnabled(config, 'armDisarm')) {
+    // cancel alarm triggered ( TODO multiple switch for all areas?)
+      messages.push(configSwitchCancelTriggered(1))
+
+      // multiple alarm state for multiple area
+      for (let areaId = 1; areaId <= config.server.areas; areaId++) {
+        messages.push(configIAlarm(areaId))
+      }
     }
 
     // last event
-    messages.push(configSensorEvents())
-
-    // errors
-    messages.push(configSensorError())
+    if (reset || configHandler.isFeatureEnabled(config, 'events')) {
+      messages.push(configSensorEvents())
+    }
 
     return messages
   }
