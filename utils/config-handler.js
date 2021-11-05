@@ -3,10 +3,14 @@ const YAML = require('yaml')
 const fs = require('fs')
 const path = require('path')
 
+const loggerBasic = require('ialarm/src/logger')('info')
+
 /**
 * Add to config all default values if missing
 */
 function initDefaults (config, configFile) {
+  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+
   /**
        * Check or init a config value
       * @param {*} object
@@ -27,7 +31,7 @@ function initDefaults (config, configFile) {
     if (!exists) {
       if (defaultValue !== undefined && index === paths.length - 1) {
         // create default
-        console.log(`Config.json value not specified on ${configFile} using default '${defaultValue}' on ${JSON.stringify(paths)}`)
+        logger.warn(`Config.json value not specified on ${configFile} using default '${defaultValue}' on ${JSON.stringify(paths)}`)
         object[key] = defaultValue
       } else {
         throw new Error(`subscribe error: ${configFile} is missing ${paths[index]} on ${JSON.stringify(paths)}. See: ${JSON.stringify(config.topics)}`)
@@ -44,9 +48,12 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['server', 'port'])
     _checkConfig(config, ['server', 'username'])
     _checkConfig(config, ['server', 'password'])
-    _checkConfig(config, ['server', 'zones'], 0, 40)
+    _checkConfig(config, ['server', 'zones'], 0, 40) // we support max 128 zone but default will be 40 to avoid pushing unuseful sensors
+    _checkConfig(config, ['server', 'areas'], 0, 1)
+    _checkConfig(config, ['server', 'delay'], 0, 200)
     _checkConfig(config, ['server', 'polling_status'], 0, (config.server && config.server.polling && config.server.polling.status) || 5000)
     _checkConfig(config, ['server', 'polling_events'], 0, (config.server && config.server.polling && config.server.polling.events) || 10000)
+    _checkConfig(config, ['server', 'features'], 0, ['armDisarm', 'sensors', 'events', 'bypass', 'zoneNames'])
     _checkConfig(config, ['mqtt', 'port'])
     _checkConfig(config, ['mqtt', 'host'])
     _checkConfig(config, ['mqtt', 'username'])
@@ -58,7 +65,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['topics', 'availability'], 0, 'ialarm/alarm/availability')
     _checkConfig(config, ['topics', 'error'], 0, 'ialarm/alarm/error')
     _checkConfig(config, ['topics', 'alarm'], 0, {})
-    _checkConfig(config, ['topics', 'alarm', 'command'], 0, 'ialarm/alarm/set')
+    _checkConfig(config, ['topics', 'alarm', 'command'], 0, 'ialarm/alarm/area/${areaId}/set')
     _checkConfig(config, ['topics', 'alarm', 'state'], 0, 'ialarm/alarm/state')
     _checkConfig(config, ['topics', 'alarm', 'event'], 0, 'ialarm/alarm/event')
     _checkConfig(config, ['topics', 'alarm', 'bypass'], 0, 'ialarm/alarm/zone/${zoneId}/bypass')
@@ -129,8 +136,9 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['hadiscovery', 'enabled'], 0, true)
     _checkConfig(config, ['hadiscovery', 'discoveryPrefix'], 0, 'homeassistant')
     _checkConfig(config, ['hadiscovery', 'topics'], 0, {})
-    _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, '${discoveryPrefix}/alarm_control_panel/ialarm/config')
+    _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, '${discoveryPrefix}/alarm_control_panel/ialarm_${areaId}/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, '${discoveryPrefix}/sensor/ialarm/events/config')
+    _checkConfig(config, ['hadiscovery', 'topics', 'errorConfig'], 0, '${discoveryPrefix}/sensor/ialarm/error/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorBatteryConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorAlarmConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config')
@@ -241,7 +249,7 @@ module.exports = {
   readHassOsOptions: function (optionsFile) {
     // merge default config.json with options.json
 
-    console.log('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
+    loggerBasic.info('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
     const hassos = require(optionsFile)
 
     // default file
@@ -277,11 +285,11 @@ module.exports = {
     // if is a json file
     if (configPath.endsWith('.json')) {
       configFile = configPath
-      console.log('Found external json configuration file ', configPath)
+      loggerBasic.info('Found external json configuration file ', configPath)
       config = require(configFile)
     } else if (configPath.endsWith('.yaml')) {
       configFile = configPath
-      console.log('Found external yaml configuration file', configPath)
+      loggerBasic.info('Found external yaml configuration file', configPath)
       const file = fs.readFileSync(configFile, 'utf8')
       config = YAML.parse(file)
     } else {
@@ -290,13 +298,13 @@ module.exports = {
         configPath = configPath + '/'
       }
       try {
-        console.log('Searching external config.yaml in path', configPath)
+        loggerBasic.info('Searching external config.yaml in path', configPath)
         // loading external file
         configFile = configPath + 'config.yaml'
         const file = fs.readFileSync(configFile, 'utf8')
         config = YAML.parse(file)
       } catch (error) {
-        console.log('Searching external config.json in path', configPath)
+        loggerBasic.info('Searching external config.json in path', configPath)
         // loading external file
         configFile = configPath + 'config.json'
         config = require(configFile)
@@ -321,11 +329,11 @@ module.exports = {
 
     fs.writeFile(`${baseDir}/templates/full.config.yaml`, yamlContent, 'utf8', function (err) {
       if (err) {
-        console.log('An error occured while writing Yaml to File.')
-        return console.log(err)
+        loggerBasic.error('An error occured while writing Yaml to File.')
+        return
       }
 
-      console.log('Yaml file generated')
+      loggerBasic.info('Yaml file generated')
     })
 
     return config
@@ -353,6 +361,29 @@ module.exports = {
 
       return defaultConfig
     }
+  },
+  /**
+   * Check if feature is enabled in config
+   * @param {*} config
+   * @param {*} featureNames
+   * @returns
+   */
+  isFeatureEnabled: function (config, featureNames) {
+    if (!Array.isArray(featureNames)) {
+      if (config.server.features.includes(featureNames)) {
+        return true
+      }
+      loggerBasic.warn(`Feature ${featureNames} is disabled`)
+      return false
+    }
+    for (let index = 0; index < featureNames.length; index++) {
+      const element = featureNames[index]
+      if (config.server.features.includes(element)) {
+        return true
+      }
+    }
+    loggerBasic.warn(`Features ${JSON.stringify(featureNames)} are disabled`)
+    return false
   }
 
 }

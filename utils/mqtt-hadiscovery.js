@@ -2,8 +2,11 @@
 
 const pjson = require('../package.json')
 const configHandler = require('./config-handler')
+const constants = require('ialarm/src/constants')
 
 module.exports = function (config, zonesToConfig, reset, deviceInfo) {
+  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+
   const alarmId = `alarm_mqtt_${(deviceInfo && deviceInfo.mac && deviceInfo.mac.split(':').join('')) || 'meian'}`
 
   const deviceConfig = {
@@ -23,6 +26,16 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       name: `${deviceConfig.name} ${config.hadiscovery.zoneName} ${zone.id} ${zone.name}`,
       model: zone.type
     }
+  }
+
+  function getAvailability () {
+    return [
+      {
+        topic: config.topics.availability,
+        payload_available: config.payloads.alarmAvailable,
+        payload_not_available: config.payloads.alarmNotvailable
+      }
+    ]
   }
 
   const _getTopic = function (topicTemplate, data) {
@@ -139,7 +152,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
       payload = {
         name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         device_class: deviceClass,
         value_template: valueTemplate,
         payload_on: config.payloads.sensorOn,
@@ -171,7 +184,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
         name: config.hadiscovery.events.name
           ? config.hadiscovery.events.name
           : `${deviceConfig.name} last event`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.event,
         value_template: '{{value_json.description}}',
         json_attributes_topic: config.topics.alarm.event,
@@ -184,6 +197,32 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     }
     return {
       topic: _getTopic(config.hadiscovery.topics.eventsConfig),
+      payload
+    }
+  }
+
+  /**
+     * Error log
+     * @returns
+     */
+  const configSensorError = function () {
+    let payload = ''
+    if (!reset) {
+      payload = {
+        name: `${deviceConfig.name} comunication error`,
+        availability: getAvailability(),
+        state_topic: config.topics.error,
+        value_template: '{{value_json.message}}',
+        json_attributes_topic: config.topics.error,
+        json_attributes_template: '{{ value_json | tojson }}',
+        unique_id: `${alarmId}_comunication_error`,
+        icon: 'mdi:alert-circle',
+        device: deviceConfig,
+        qos: config.hadiscovery.sensors_qos
+      }
+    }
+    return {
+      topic: _getTopic(config.hadiscovery.topics.errorConfig),
       payload
     }
   }
@@ -206,7 +245,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
       payload = {
         name: bypassName + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: stateTopic,
         value_template: `{{ '${config.payloads.sensorOn}' if value_json.bypass else '${config.payloads.sensorOff}' }}`,
         payload_on: config.payloads.sensorOn,
@@ -239,7 +278,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     if (!reset) {
       payload = {
         name: `${deviceConfig.name} clean cache`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cacheClear }}',
         command_topic: config.topics.alarm.resetCache,
@@ -268,7 +307,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     if (!reset) {
       payload = {
         name: `${deviceConfig.name} clean discovery`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.discoveryClear }}',
         command_topic: config.topics.alarm.discovery,
@@ -292,15 +331,19 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
      * @param {*} i
      * @returns
      */
-  const configSwitchCancelTriggered = function () {
+  const configSwitchCancelTriggered = function (areaId) {
     let payload = ''
     if (!reset) {
+      // only 1 switch for all areas?
+      const commandTopic = _getTopic(config.topics.alarm.command, {
+        areaId: areaId
+      })
       payload = {
         name: `${deviceConfig.name} clean triggered`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cancel }}',
-        command_topic: config.topics.alarm.command,
+        command_topic: commandTopic,
         payload_on: 'cancel',
         payload_off: 'OFF',
         unique_id: `${alarmId}_cancel_trigger`,
@@ -315,16 +358,20 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     }
   }
 
-  const configIAlarm = function () {
+  const configIAlarm = function (areaId) {
     let payload = ''
     if (!reset) {
+      const commandTopic = _getTopic(config.topics.alarm.command, {
+        areaId: areaId
+      })
       payload = {
-        name: deviceConfig.name,
-        unique_id: `${alarmId}_unit`,
+        name: `${deviceConfig.name}${config.server.areas > 1 ? ' Area ' + areaId : ''}`,
+        unique_id: `${alarmId}_unit${config.server.areas > 1 ? '_area' + areaId : ''}`,
         device: deviceConfig,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.state,
-        command_topic: config.topics.alarm.command,
+        value_template: `{{ value_json.status_${areaId} }}`,
+        command_topic: commandTopic,
         payload_disarm: config.payloads.alarm.disarm,
         payload_arm_home: config.payloads.alarm.armHome,
         payload_arm_away: config.payloads.alarm.armAway,
@@ -338,15 +385,18 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       }
     }
     return {
-      topic: _getTopic(config.hadiscovery.topics.alarmConfig),
+      topic: _getTopic(config.hadiscovery.topics.alarmConfig, {
+        areaId: areaId
+      }),
       payload
     }
   }
 
-  function configCleanup (zone, topic) {
+  function configCleanup (topic, zone) {
     return {
       topic: _getTopic(topic, {
-        zoneId: zone.id
+        zoneId: zone && zone.id,
+        discoveryPrefix: config.hadiscovery.discoveryPrefix
       }),
       payload: ''
     }
@@ -354,7 +404,13 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
   this.createMessages = function () {
     const messages = []
-    const zoneSize = reset ? 40 : zonesToConfig.length || 40
+
+    // cleanup old topics structures
+    if (reset) {
+      messages.push(configCleanup('${discoveryPrefix}/alarm_control_panel/ialarm/config'))
+    }
+
+    const zoneSize = reset ? constants.maxZones : zonesToConfig.length || constants.maxZones
     for (let i = 0; i < zoneSize; i++) {
       let zone
       if (reset) {
@@ -363,38 +419,54 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
         zone = zonesToConfig[i]
         // disabled/not in use zone
         if (zone.typeId === 0) {
-          console.log(`Ignoring unused zone ${zone.id}`)
+          logger.log('debug', `Ignoring unused zone ${zone.id}`)
           continue
         }
       }
 
       // cleanup old topics structures
       if (reset) {
-        messages.push(configCleanup(zone, '${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config'))
-        messages.push(configCleanup(zone, '${discoveryPrefix}/sensor/ialarm${zoneId}/battery/config'))
-        // messages.push(configCleanup(zone, "${discoveryPrefix}/sensor/${zoneId}/battery/config"));
+        messages.push(configCleanup('${discoveryPrefix}/binary_sensor/ialarm/${zoneId}/config', zone))
+        messages.push(configCleanup('${discoveryPrefix}/sensor/ialarm${zoneId}/battery/config', zone))
+        // messages.push(configCleanup("${discoveryPrefix}/sensor/${zoneId}/battery/config", zone));
       }
 
       // binary sensors
-      messages.push(configSensorFault(zone, i))
-      messages.push(configSensorBattery(zone, i))
-      messages.push(configSensorAlarm(zone, i))
-      messages.push(configSensorConnectivity(zone, i))
+      if (reset || configHandler.isFeatureEnabled(config, 'sensors')) {
+        messages.push(configSensorFault(zone, i))
+        messages.push(configSensorBattery(zone, i))
+        messages.push(configSensorAlarm(zone, i))
+        messages.push(configSensorConnectivity(zone, i))
+      }
 
       // bypass switches
-      messages.push(configSwitchBypass(zone, i))
+      if (reset || configHandler.isFeatureEnabled(config, 'bypass')) {
+        messages.push(configSwitchBypass(zone, i))
+      }
     }
 
     // switch to clear cache and discovery configs
     messages.push(configSwitchClearCache())
     messages.push(configSwitchClearDiscovery())
-    // cancel alarm triggered
-    messages.push(configSwitchCancelTriggered())
 
-    // alarm state
-    messages.push(configIAlarm())
+    // errors
+    messages.push(configSensorError())
+
+    if (reset || configHandler.isFeatureEnabled(config, 'armDisarm')) {
+    // cancel alarm triggered ( TODO multiple switch for all areas?)
+      messages.push(configSwitchCancelTriggered(1))
+
+      // multiple alarm state for multiple area
+      for (let areaId = 1; areaId <= config.server.areas; areaId++) {
+        messages.push(configIAlarm(areaId))
+      }
+    }
+
     // last event
-    messages.push(configSensorEvents())
+    if (reset || configHandler.isFeatureEnabled(config, 'events')) {
+      messages.push(configSensorEvents())
+    }
+
     return messages
   }
 }
