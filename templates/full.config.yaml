@@ -4,8 +4,16 @@ server:
   username: admin
   password: password
   zones: 40
+  areas: 1
+  delay: 200
   polling_status: 5000
   polling_events: 10000
+  features:
+    - armDisarm
+    - sensors
+    - events
+    - bypass
+    - zoneNames
 mqtt:
   host: 192.168.1.82
   port: "1883"
@@ -20,7 +28,7 @@ topics:
   availability: ialarm/alarm/availability
   error: ialarm/alarm/error
   alarm:
-    command: ialarm/alarm/set
+    command: ialarm/alarm/area/${areaId}/set
     state: ialarm/alarm/state
     event: ialarm/alarm/event
     bypass: ialarm/alarm/zone/${zoneId}/bypass
@@ -83,8 +91,9 @@ hadiscovery:
   enabled: true
   discoveryPrefix: homeassistant
   topics:
-    alarmConfig: ${discoveryPrefix}/alarm_control_panel/ialarm/config
+    alarmConfig: ${discoveryPrefix}/alarm_control_panel/ialarm_${areaId}/config
     eventsConfig: ${discoveryPrefix}/sensor/ialarm/events/config
+    errorConfig: ${discoveryPrefix}/sensor/ialarm/error/config
     sensorConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config
     sensorBatteryConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config
     sensorAlarmConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config
