@@ -276,11 +276,14 @@ module.exports = (config) => {
    * @returns
    */
   function startPolling () {
+    pollings.push(setInterval(function () {
+      publisher.publishAvailable()
+    }, 300000))
+
     // alarm and sensor status
     if (configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors', 'bypass'])) {
       logger.info('Status polling every ', config.server.polling_status, ' ms')
       pollings.push(setInterval(function () {
-        publisher.publishAvailable()
         readStatus()
       }, config.server.polling_status))
     } else {
@@ -374,6 +377,9 @@ module.exports = (config) => {
 
           // clean errors
           publisher.publishError('OK')
+
+          // availability
+          publisher.publishAvailable()
 
           // we are ready to start tcp polling
           startPolling()

@@ -28,6 +28,16 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     }
   }
 
+  function getAvailability () {
+    return [
+      {
+        topic: config.topics.availability,
+        payload_available: config.payloads.alarmAvailable,
+        payload_not_available: config.payloads.alarmNotvailable
+      }
+    ]
+  }
+
   const _getTopic = function (topicTemplate, data) {
     if (!data) {
       data = {}
@@ -142,7 +152,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
       payload = {
         name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         device_class: deviceClass,
         value_template: valueTemplate,
         payload_on: config.payloads.sensorOn,
@@ -174,7 +184,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
         name: config.hadiscovery.events.name
           ? config.hadiscovery.events.name
           : `${deviceConfig.name} last event`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.event,
         value_template: '{{value_json.description}}',
         json_attributes_topic: config.topics.alarm.event,
@@ -200,7 +210,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     if (!reset) {
       payload = {
         name: `${deviceConfig.name} comunication error`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.error,
         value_template: '{{value_json.message}}',
         json_attributes_topic: config.topics.error,
@@ -235,7 +245,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
 
       payload = {
         name: bypassName + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: stateTopic,
         value_template: `{{ '${config.payloads.sensorOn}' if value_json.bypass else '${config.payloads.sensorOff}' }}`,
         payload_on: config.payloads.sensorOn,
@@ -268,7 +278,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     if (!reset) {
       payload = {
         name: `${deviceConfig.name} clean cache`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cacheClear }}',
         command_topic: config.topics.alarm.resetCache,
@@ -297,7 +307,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     if (!reset) {
       payload = {
         name: `${deviceConfig.name} clean discovery`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.discoveryClear }}',
         command_topic: config.topics.alarm.discovery,
@@ -330,7 +340,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       })
       payload = {
         name: `${deviceConfig.name} clean triggered`,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cancel }}',
         command_topic: commandTopic,
@@ -358,7 +368,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
         name: `${deviceConfig.name}${config.server.areas > 1 ? ' Area ' + areaId : ''}`,
         unique_id: `${alarmId}_unit${config.server.areas > 1 ? '_area' + areaId : ''}`,
         device: deviceConfig,
-        availability_topic: config.topics.availability,
+        availability: getAvailability(),
         state_topic: config.topics.alarm.state,
         value_template: `{{ value_json.status_${areaId} }}`,
         command_topic: commandTopic,

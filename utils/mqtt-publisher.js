@@ -175,7 +175,7 @@ module.exports = function (config) {
       username: config.mqtt.username,
       password: config.mqtt.password,
       clientId: clientId,
-      will: { topic: config.topics.availability, payload: 'offline' }
+      will: { topic: config.topics.availability, payload: config.payloads.alarmNotvailable }
     })
 
     client.on('connect', function () {
@@ -376,7 +376,7 @@ module.exports = function (config) {
   this.publishAvailable = function () {
     const m = {}
     m.topic = config.topics.availability
-    m.payload = 'online'
+    m.payload = config.payloads.alarmAvailable
     _publish(m.topic, m.payload)
   }
 
