@@ -54,8 +54,18 @@ module.exports = (config) => {
    * @param {*} zones
    * @returns
    */
-  function removeEmptyZones (zones) {
-    return zones.filter(z => z.typeId > 0 && z.name !== '')
+  function removeDisabledZones (zones, showUnnamedZones) {
+    return zones.filter(z => {
+      if (!z.typeId || z.typeId <= 0) {
+        logger.info(`removeDisabledZones: filtering out zone ${z.id} with typeId disabled`, z)
+        return false
+      }
+      if (!showUnnamedZones && !z.name) {
+        logger.info(`removeDisabledZones: filtering out zone ${z.id} with empty name`, z)
+        return false
+      }
+      return true
+    })
   }
 
   /**
@@ -341,18 +351,14 @@ module.exports = (config) => {
           }
           // zone names disabled, building them
           const zoneNames = []
-          let zonesId = []
-          if (Array.isArray(config.server.zones)) {
-            zonesId = config.server.zones
-          } else {
-            for (let index = 0; index < config.server.zones; index++) {
-              const zoneNumber = index + 1
-              zonesId.push(zoneNumber)
-            }
+
+          // config check
+          if (!Array.isArray(config.server.zones)) {
+            throw new Error('config.server.zones must be an array')
           }
 
-          for (let index = 0; index < zonesId.length; index++) {
-            const zoneNumber = zonesId[index]
+          for (let index = 0; index < config.server.zones.length; index++) {
+            const zoneNumber = config.server.zones[index]
             zoneNames.push(
               {
                 typeId: 2, // using Perimetrale as default
@@ -369,7 +375,7 @@ module.exports = (config) => {
         }).then(function (response) {
           logger.info(`got ${Object.keys(response).length} ' zones info'`)
           // remove empty or disabled zones
-          zonesCache.zones = removeEmptyZones(response)
+          zonesCache.zones = removeDisabledZones(response, config.server.showUnnamedZones)
           zonesCache.caching = false
 
           // home assistant discovery (if enabled)

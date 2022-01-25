@@ -410,16 +410,20 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       messages.push(configCleanup('${discoveryPrefix}/alarm_control_panel/ialarm/config'))
     }
 
-    const zoneSize = reset ? constants.maxZones : zonesToConfig.length || constants.maxZones
-    for (let i = 0; i < zoneSize; i++) {
+    for (let i = 0; i < constants.maxZones; i++) {
       let zone
       if (reset) {
         zone = { id: i + 1 }
       } else {
         zone = zonesToConfig[i]
+        // zone not found
+        if (!zone) {
+          logger.log('error', `HA discovery config: ignoring zone ${i} (GetZone did not return any info on this zone or it is filtered out via server.zones in config)`)
+          continue
+        }
         // disabled/not in use zone
         if (zone.typeId === 0) {
-          logger.log('debug', `Ignoring unused zone ${zone.id}`)
+          logger.log('debug', `HA discovery config: ignoring unused zone ${zone.id} (it's configured as disabled on the alarm - typeId = 0)`)
           continue
         }
       }
