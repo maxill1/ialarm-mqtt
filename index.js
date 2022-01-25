@@ -341,18 +341,14 @@ module.exports = (config) => {
           }
           // zone names disabled, building them
           const zoneNames = []
-          let zonesId = []
-          if (Array.isArray(config.server.zones)) {
-            zonesId = config.server.zones
-          } else {
-            for (let index = 0; index < config.server.zones; index++) {
-              const zoneNumber = index + 1
-              zonesId.push(zoneNumber)
-            }
+
+          // config check
+          if (!Array.isArray(config.server.zones)) {
+            throw new Error('config.server.zones must be an array')
           }
 
-          for (let index = 0; index < zonesId.length; index++) {
-            const zoneNumber = zonesId[index]
+          for (let index = 0; index < config.server.zones.length; index++) {
+            const zoneNumber = config.server.zones[index]
             zoneNames.push(
               {
                 typeId: 2, // using Perimetrale as default

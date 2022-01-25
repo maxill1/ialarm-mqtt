@@ -233,6 +233,16 @@ function initDefaults (config, configFile) {
       config.zones = zones
     }
 
+    // config.server.zones to array
+    if (!Array.isArray(config.server.zones)) {
+      const zoneArray = []
+      for (let index = 0; index < config.server.zones; index++) {
+        const zoneNumber = index + 1
+        zoneArray.push(zoneNumber)
+      }
+      config.server.zones = zoneArray
+    }
+
     return config
   } else {
     console.error('No config file provided')
