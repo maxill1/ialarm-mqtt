@@ -49,6 +49,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['server', 'username'])
     _checkConfig(config, ['server', 'password'])
     _checkConfig(config, ['server', 'zones'], 0, 40) // we support max 128 zone but default will be 40 to avoid pushing unuseful sensors
+    _checkConfig(config, ['server', 'showUnnamedZones'], 0, true) // default true
     _checkConfig(config, ['server', 'areas'], 0, 1)
     _checkConfig(config, ['server', 'delay'], 0, 200)
     _checkConfig(config, ['server', 'polling_status'], 0, (config.server && config.server.polling && config.server.polling.status) || 5000)
