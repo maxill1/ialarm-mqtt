@@ -1,33 +1,293 @@
-const IAlarm = require('ialarm')
-const constants = require('ialarm/src/constants')
-const IAlarmLogger = require('ialarm/src/logger')
-const configHandler = require('./utils/config-handler')
-const IAlarmPublisher = require('./utils/mqtt-publisher')
-const IAlarmStatusDecoder = require('ialarm/src/status-decoder')()
 
-module.exports = (config) => {
-  const logger = IAlarmLogger(config.debug ? 'debug' : 'info')
+import { MeianSocket, MeianDataHandler, MeianConstants, MeianLogger, MeianConnection, MeianStatusDecoder } from 'ialarm'
+import { MqttPublisher } from './utils/mqtt-publisher.js'
+import { configHandler } from './utils/config-handler.js'
+
+export const ialarmMqtt = (config) => {
+  const logger = MeianLogger(config.debug ? 'debug' : 'info')
 
   if (!config) {
     console.error('Please provide a valid config.json')
     process.exit(1)
   }
 
-  const publisher = new IAlarmPublisher(config)
+  let errorCount = 0
+
+  const publisher = new MqttPublisher(config)
+
+  // TODO config.server.delay for concurrent commands
+
+  // single connection for all messages
+  const socket = new MeianSocket(
+    config.server.host,
+    config.server.port,
+    config.server.username,
+    config.server.password,
+    config.verbose ? 'debug' : 'info',
+    config.server.zones
+  )
+
+  function connectToAlarm () {
+    logger.info('Starting TCP connection...')
+    // connect
+    socket.connect()
+  }
+
+  function executeCommand (commands, args) {
+    try {
+      const delay = MeianConnection.status.isReady() ? 0 : 200
+      // idle or autenticating
+      const requestTime = new Date().getTime()
+      const commandInterval = setInterval(async () => {
+        const executionTime = new Date().getTime()
+        // async command
+        if (MeianConnection.status.isReady() || (executionTime - requestTime) > 10000) {
+          clearInterval(commandInterval)
+          await socket.executeCommand(commands, args)
+        } else {
+          logger.info(`A request is in progress...we will wait for response before sending ${JSON.stringify(commands)} (${JSON.stringify(args)})`)
+        }
+      },
+      delay)
+    } catch (error) {
+      handleError(error)
+    }
+  }
+
+  /**
+   * ready to send commands
+   */
+  socket.onConnected(async (connectionResponse) => {
+    logger.info(`logged in (${connectionResponse})`)
+
+    logger.info('Setting up first TCP command to retrieve mac address...')
+    // send commands
+    executeCommand('GetNet')
+    logger.info(`First connection OK: alarm panel responded ${JSON.stringify(config.deviceInfo)}`)
+    logger.info('Retrieving zone info ...')
+    if (configHandler.isFeatureEnabled(config, 'zoneNames')) {
+      executeCommand('GetZone')
+    }
+
+    // availability
+    publisher.publishAvailable(true)
+
+    // we are ready to start tcp polling
+    startPolling()
+  })
+
+  // command
+  socket.onResponse(async (commandResponse) => {
+    try {
+      // formatted payload
+      const payload = commandResponse.payloads?.data
+      // mac address, ip, etc
+      if (payload.GetNet) {
+        parseNet(payload.GetNet)
+      }
+
+      // parse zone names and put them into cache
+      if (payload.GetZone) {
+        parseZones(payload.GetZone)
+      }
+
+      // status and sensors
+      if ((payload.GetAlarmStatus || payload.GetArea) && payload.GetByWay) {
+        parseStatusAndSensors(payload.GetAlarmStatus || payload.GetArea, payload.GetByWay, payload.GetZone || zonesCache.zones)
+      }
+
+      if (payload.SetByWay || payload.SetAlarmStatus || payload.SetArea) {
+        if (payload.SetByWay) {
+          // gets the latest state sensor from mqtt cache and updates only the submitted properties
+          const zoneNumber = payload.SetByWay.zone + 1
+          publisher.updateStateSensor(zoneNumber, { bypass: payload.SetByWay.bypass })
+        }
+        if (payload.SetAlarmStatus) {
+          publisher.publishStateIAlarm({
+            status_1: payload.SetAlarmStatus
+          })
+        }
+        // TODO UNTESTED!!! SetArea
+        if (payload.SetArea && payload.SetArea.status_1) {
+          publisher.publishStateIAlarm(payload.SetArea)
+        }
+
+        logger.debug(`Received response: ${JSON.stringify(commandResponse)}`)
+        if (!isPolling()) {
+          startPolling()
+        }
+      }
+
+      Object.keys(commandResponse).forEach(command => {
+        if (commandResponse[command] && (commandResponse[command].error || commandResponse[command].timeout)) {
+          logger.log('error', `${command} responded with an error "${commandResponse[command].error}" or timed out ${commandResponse[command].timeout}`)
+        }
+      })
+
+      // once received GetNet and GetZones we are ready to start discovery
+      if (isResponseValid(payload.GetNet) && zonesCache.zones) {
+      // home assistant discovery (if enabled)
+        discovery(config.hadiscovery.enabled)
+      }
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+  function isResponseValid (response) {
+    return response && !response.error
+  }
+
+  /**
+   * Mac address, ip, etc
+   * @param {*} GetNet
+   */
+  function parseNet (GetNet) {
+    if (!isResponseValid(GetNet)) {
+      return
+    }
+    config.deviceInfo = GetNet
+  }
+
+  /**
+   * Zone Names
+   * @param {*} GetZone
+   */
+  function parseZones (GetZone) {
+    if (!isResponseValid(GetZone)) {
+      return
+    }
+
+    let zoneNames = []
+    // zone names disabled, building them
+    if (!configHandler.isFeatureEnabled(config, 'zoneNames')) {
+      // config check
+      if (!Array.isArray(config.server.zones)) {
+        throw new Error('config.server.zones must be an array')
+      }
+
+      for (let index = 0; index < config.server.zones.length; index++) {
+        const zoneNumber = config.server.zones[index]
+        zoneNames.push(
+          {
+            typeId: 2, // using Perimetrale as default
+            type: 'Perimetrale',
+            voiceId: 1,
+            voiceName: 'Fisso',
+            id: zoneNumber,
+            zone: zoneNumber,
+            name: 'Device'
+          }
+        )
+      }
+    } else if (GetZone) {
+      zoneNames = MeianDataHandler.getZoneInfo(GetZone)
+    }
+
+    if (zoneNames && zoneNames.length > 0) {
+      logger.info(`got ${Object.keys(zoneNames).length} ' zones info'`)
+      // remove empty or disabled zones
+      zonesCache.zones = removeDisabledZones(zoneNames, config.server.showUnnamedZones)
+      zonesCache.caching = false
+    }
+  }
+
+  /**
+   * Alarm status and sensors data
+   * @param {*} GetAlarmStatus
+   * @param {*} GetByWay
+   * @param {*} GetZone
+   */
+  function parseStatusAndSensors (GetAlarmStatus, GetByWay, GetZone) {
+    // create stubs
+    GetByWay = isResponseValid(GetByWay) ? GetByWay : { zones: [] }
+    GetZone = isResponseValid(GetZone) ? GetZone : { zones: [] }
+
+    // full response
+    const zonesResponse = MeianDataHandler.getZoneStatus(
+      GetAlarmStatus, // alarm status
+      GetByWay, // sensor states
+      GetZone, // zone names (cache or previous fetch)
+      config.server.zones // configured zones
+    )
+
+    // mqtt
+    publishFullState(zonesResponse.status, zonesResponse.zones || [])
+
+    // alarm is responding
+    if (zonesResponse.status && zonesResponse.zones) {
+      publisher.publishError('OK')
+    }
+  }
+
+  // push events
+  socket.onPush(async (pushResponse) => {
+    logger.debug(`Received push: ${JSON.stringify(pushResponse)}`)
+
+    if (!configHandler.isFeatureEnabled(config, 'events')) {
+      logger.debug('Events disabled in config file')
+      return
+    }
+
+    try {
+      const data = pushResponse.data
+      if (data || !data.zone) {
+        const zoneCache = getZoneCache(data.zone)
+        if (zoneCache) {
+          data.name = zoneCache.name || data.zoneName
+          data.type = zoneCache.type
+        }
+
+        let description = data.zone
+        if (data.name) {
+          description = description + ' ' + data.name
+        }
+        description = data.content + ' (zone ' + description + ')'
+
+        // publish only if changed or empty
+        publisher.publishEvent({
+          ...data,
+          description,
+          lastUpdated: new Date().toISOString()
+        })
+      } else {
+        logger.warning(`Received an empty push event: ${JSON.stringify(data)}`)
+      }
+    } catch (error) {
+      handleError(error)
+    }
+  })
+
+  socket.onDisconnected(async (disconnectionResponse) => {
+    logger.info(`disconnected (type: ${disconnectionResponse}, errorCount: ${errorCount})`)
+    // availability
+    publisher.publishAvailable(false)
+    errorCount = 0
+  })
+
+  socket.onError(async (error) => {
+    errorCount++
+    // clean errors
+    publisher.publishError(error.message || 'Generic error')
+
+    logger.info(`Error ${error.message} - ${JSON.stringify(error.stack)}`)
+
+    // stop
+    stopPolling()
+
+    // disconnect
+    if (errorCount > 10) {
+      socket.disconnect('error')
+
+      // retry after some time
+      setTimeout(() => {
+        connectToAlarm()
+      }, 5000)
+    }
+  })
 
   let zonesCache = {}
   const pollings = []
-
-  function newAlarm () {
-    return new IAlarm(
-      config.server.host,
-      config.server.port,
-      config.server.username,
-      config.server.password,
-      config.server.zones,
-      config.verbose ? 'debug' : 'info',
-      config.server.delay)
-  }
 
   function handleError (e) {
     let msg
@@ -71,89 +331,34 @@ module.exports = (config) => {
   /**
    * Read and publis state
    */
-  function readStatus () {
-    if (!configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors'])) {
-      return
-    }
-
-    const client = newAlarm()
-
-    let status = {
-      status_1: ''
-    }
-
-    let statusPromise
-    // alarm/area status
-    if (configHandler.isFeatureEnabled(config, 'armDisarm')) {
-      const statusFunction = config.server.areas > 1 ? 'getStatusArea' : 'getStatusAlarm'
-      statusPromise = client[statusFunction]()
-    } else {
-      // fake status
-      statusPromise = new Promise((resolve) => {
-        resolve({
-          status: '' // not relevant, we are just polling sensors
-        })
-      })
-    }
-
-    statusPromise.then(function (statusResponse) {
-      status = statusResponse.status_1 ? statusResponse : { status_1: statusResponse.status }
-
-      // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
-      const mergedStatus = Object.keys(status).reduce(function (tot, current) {
-        const areaStatus = status[current]
-        if (areaStatus && IAlarmStatusDecoder.isArmed(areaStatus)) {
-          return areaStatus
-        }
-        return tot
-      }, status.status_1)
-
-      if (!configHandler.isFeatureEnabled(config, 'sensors')) {
-        return {
-        // 2
-          status: mergedStatus,
-          zones: []
-        }
-      }
-      // sensor status with names, type, etc
-      return client.getZoneStatus(mergedStatus, zonesCache.zones && zonesCache.zones.length > 0 ? zonesCache.zones : undefined)
-    }).then(function (zonesResponse) {
-      // H24 triggered or armed and zone alarm goes on area 1 (until we find a way to determine sensor area)
-      status.status_1 = zonesResponse.status === 'TRIGGERED' ? zonesResponse.status : status.status_1
-
-      publishFullState(status, zonesResponse.zones || [])
-    }).catch(handleError)
-  }
-
-  /**
-   * Read logs and publish new events
-   */
-  function readEvents () {
-    if (!configHandler.isFeatureEnabled(config, 'events')) {
-      return
-    }
-
-    newAlarm().getLastEvents().then(function ({ logs }) {
-      const lastEvent = logs && logs.length > 1 ? logs[0] : undefined
-      if (lastEvent) {
-        const zoneCache = getZoneCache(lastEvent.zone)
-        if (zoneCache) {
-          lastEvent.name = zoneCache.name
-          lastEvent.type = zoneCache.type
-        }
-
-        let description = lastEvent.zone
-        if (lastEvent.name) {
-          description = description + ' ' + lastEvent.name
-        }
-        lastEvent.description = lastEvent.message + ' (zone ' + description + ')'
-      } else {
-        logger.warning('Received no last event from alarm (logs is missing)...')
+  async function fetchStatus () {
+    try {
+      if (!configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors'])) {
+        return
       }
 
-      // publish only if changed or empty
-      publisher.publishEvent(lastEvent)
-    }).catch(handleError)
+      const commands = []
+      if (configHandler.isFeatureEnabled(config, 'sensors')) {
+        // sensor status with names, type, etc
+        commands.push('GetByWay')
+      }
+      // if needed fetch zones
+      if ((!zonesCache.zones || zonesCache.zones.length === 0) &&
+            configHandler.isFeatureEnabled(config, 'zoneNames')) {
+        commands.push('GetZone')
+      }
+
+      // if needed fetch alarm/area status
+      if (configHandler.isFeatureEnabled(config, 'armDisarm')) {
+        const command = config.server.areas > 1 ? 'GetArea' : 'GetAlarmStatus'
+        commands.push(command)
+      }
+
+      // 1, 2 or 3 commands
+      executeCommand(commands)
+    } catch (error) {
+      handleError(error)
+    }
   }
 
   /**
@@ -188,66 +393,69 @@ module.exports = (config) => {
     // publisher.publishError()
   }
 
-  /**
-     * publish received state and fetch new events
-     * @param {*} param0
-     */
-  function publishStateAndFetchEvents (data) {
-    readStatus()
-
-    // notify last event
-    setTimeout(function () {
-      readEvents()
-    }, 1000)
-
-    // reschedule active timers
-    pollings.forEach(element => {
-      element.refresh()
-    })
-  }
-
-  function armDisarm (commandType, numArea) {
+  async function armDisarm (commandType, numArea) {
     if (!configHandler.isFeatureEnabled(config, 'armDisarm')) {
       return
     }
+    try {
+      const alarmStatusName = MeianStatusDecoder.fromStatusToTcpValue(commandType)
+      if (!commandType || !alarmStatusName) {
+        logger.error(`Received invalid alarm command: ${commandType}`)
+      } else {
+        logger.info(`Received alarm command: ${commandType}`)
 
-    const alarm = newAlarm()
-    if (!commandType || !alarm[commandType]) {
-      logger.error(`Received invalid alarm command: ${commandType}`)
-    } else {
-      logger.info(`Received alarm command: ${commandType}`)
-      // force publish on next round
-      publisher.resetCache()
-      // command
-      alarm[commandType](numArea).then(publishStateAndFetchEvents).catch(handleError)
+        // stop polling
+        stopPolling()
 
-      if (config.debug) {
-        logger.info('DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm.' + commandType + '()')
-        logger.info('DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm.' + commandType + '()')
-        publisher.publishStateIAlarm(commandType)
+        // force publish on next round
+        publisher.resetCache()
+        // command
+        const commandName = config.server.areas > 1 ? 'SetArea' : 'SetAlarmStatus'
+        const commandArgs = config.server.areas > 1 ? [[numArea, alarmStatusName]] : [[alarmStatusName]]
+        executeCommand(commandName, commandArgs)
+
+        if (config.debug) {
+          logger.info('DEBUG MODE: IGNORING SET COMMAND RECEIVED for alarm.' + commandType + '()')
+          logger.info('DEBUG MODE: FAKING SET COMMAND RECEIVED for alarm.' + commandType + '()')
+          publisher.publishStateIAlarm(commandType)
+        }
       }
+    } catch (error) {
+      handleError(error)
     }
   }
 
-  function bypassZone (zoneNumber, bypass) {
+  async function bypassZone (zoneNumber, bypass) {
     if (!configHandler.isFeatureEnabled(config, 'bypass')) {
       return
     }
 
-    if (!zoneNumber || zoneNumber > constants.maxZones) {
-      console.error('bypassZone: received invalid zone number: ' + zoneNumber)
-      return
+    try {
+      if (!zoneNumber || zoneNumber > MeianConstants.maxZones) {
+        console.error('bypassZone: received invalid zone number: ' + zoneNumber)
+        return
+      }
+      bypass = bypass || false
+
+      // stop polling
+      stopPolling()
+
+      logger.info('Received bypass ' + bypass + ' for zone number ' + zoneNumber)
+
+      // force publish on next round
+      publisher.resetCache()
+
+      // zone 0-indexed
+      executeCommand('SetByWay', [[zoneNumber - 1, bypass]])
+    } catch (error) {
+      handleError(error)
     }
-    bypass = bypass || false
-
-    logger.info('Received bypass ' + bypass + ' for zone number ' + zoneNumber)
-
-    // force publish on next round
-    publisher.resetCache()
-    newAlarm().bypassZone(zoneNumber, bypass).then(publishStateAndFetchEvents).catch(handleError)
   }
 
   function discovery (enabled) {
+    // clean errors
+    publisher.publishError('OK')
+
     // home assistant mqtt discovery (if not enabled it will reset all /config topics)
     publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled, config.deviceInfo)
     if (!enabled) {
@@ -260,7 +468,7 @@ module.exports = (config) => {
     publisher.resetCache()
 
     // sending fresh data
-    readStatus()
+    fetchStatus()
   }
 
   /**
@@ -282,32 +490,48 @@ module.exports = (config) => {
   }
 
   /**
+   * stop polling
+   */
+  function stopPolling () {
+    // reset timers
+    if (pollings.length > 0) {
+      clearInterval(pollings)
+    }
+  }
+
+  /**
+   * Check if any timeout is currently active
+   * @returns
+   */
+  function isPolling () {
+    return pollings && pollings.length > 0
+  }
+
+  /**
    * set up pollings
    * @returns
    */
   function startPolling () {
+    if (isPolling()) {
+      return
+    }
+
     pollings.push(setInterval(function () {
-      publisher.publishAvailable()
+      publisher.publishAvailable(true)
     }, 300000))
 
     // alarm and sensor status
     if (configHandler.isFeatureEnabled(config, ['armDisarm', 'sensors', 'bypass'])) {
-      logger.info('Status polling every ', config.server.polling_status, ' ms')
+      logger.info(`Status polling every ${config.server.polling_status}ms`)
       pollings.push(setInterval(function () {
-        readStatus()
+        if ((!zonesCache.zones || zonesCache.zones.length === 0) && !config.deviceInfo) {
+          publisher.publishError('Missing network and zone infos')
+          return
+        }
+        fetchStatus()
       }, config.server.polling_status))
     } else {
       logger.debug('Status disabled in config file')
-    }
-
-    // event messages
-    if (configHandler.isFeatureEnabled(config, 'events')) {
-      logger.info('Events polling every ', config.server.polling_events, ' ms')
-      pollings.push(setInterval(function () {
-        readEvents()
-      }, config.server.polling_events))
-    } else {
-      logger.debug('Events disabled in config file')
     }
   }
 
@@ -333,67 +557,8 @@ module.exports = (config) => {
       // on connection start tcp polling
       () => {
         // reset timers
-        if (pollings.length > 0) {
-          clearInterval(pollings)
-        }
-
-        logger.info('Setting up first TCP connection to retrieve mac address...')
-        // fetching alarm info
-        newAlarm().getNet().then(function (network) {
-          config.deviceInfo = network
-          logger.info(`First connection OK: connected to alarm panel ${JSON.stringify(config.deviceInfo)}`)
-
-          logger.info('Retrieving zone info ...')
-
-          if (configHandler.isFeatureEnabled(config, 'zoneNames')) {
-            // initial zone info fetch
-            return newAlarm().getZoneInfo()
-          }
-          // zone names disabled, building them
-          const zoneNames = []
-
-          // config check
-          if (!Array.isArray(config.server.zones)) {
-            throw new Error('config.server.zones must be an array')
-          }
-
-          for (let index = 0; index < config.server.zones.length; index++) {
-            const zoneNumber = config.server.zones[index]
-            zoneNames.push(
-              {
-                typeId: 2, // using Perimetrale as default
-                type: 'Perimetrale',
-                voiceId: 1,
-                voiceName: 'Fisso',
-                id: zoneNumber,
-                zone: zoneNumber,
-                name: 'Device'
-              }
-            )
-          }
-          return zoneNames
-        }).then(function (response) {
-          logger.info(`got ${Object.keys(response).length} ' zones info'`)
-          // remove empty or disabled zones
-          zonesCache.zones = removeDisabledZones(response, config.server.showUnnamedZones)
-          zonesCache.caching = false
-
-          // home assistant discovery (if enabled)
-          discovery(config.hadiscovery.enabled)
-
-          // clean errors
-          publisher.publishError('OK')
-
-          // availability
-          publisher.publishAvailable()
-
-          // we are ready to start tcp polling
-          startPolling()
-        }).catch((error) => {
-          logger.error(`Error starting up: ${error && error.message}`)
-          // end polling and close app
-          stop(pollings)
-        })
+        stopPolling()
+        connectToAlarm()
       },
       // on disconnection end polling and close app
       () => {
@@ -404,9 +569,9 @@ module.exports = (config) => {
 
   function stop () {
     logger.info('Stopping...')
-    pollings && pollings.forEach(item => {
-      clearInterval(item)
-    })
+    // reset timers
+    stopPolling()
+
     // exit ialarm-mqtt
     process.exit(1)
   }
