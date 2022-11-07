@@ -1,11 +1,11 @@
 /* eslint-disable no-template-curly-in-string */
 
-const pjson = require('../package.json')
-const configHandler = require('./config-handler')
-const constants = require('ialarm/src/constants')
+import { MeianConstants, MeianLogger } from 'ialarm'
+import { configHandler }  from './config-handler.js'
+import pjson from '../package.json' assert { type: 'json' }
 
-module.exports = function (config, zonesToConfig, reset, deviceInfo) {
-  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+export default function (config, zonesToConfig, reset, deviceInfo) {
+  const logger = MeianLogger(config.verbose ? 'debug' : 'info')
 
   const alarmId = `alarm_mqtt_${(deviceInfo && deviceInfo.mac && deviceInfo.mac.split(':').join('')) || 'meian'}`
 
@@ -410,7 +410,7 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
       messages.push(configCleanup('${discoveryPrefix}/alarm_control_panel/ialarm/config'))
     }
 
-    for (let i = 0; i < constants.maxZones; i++) {
+    for (let i = 0; i < MeianConstants.maxZones; i++) {
       let zone
       if (reset) {
         zone = { id: i + 1 }

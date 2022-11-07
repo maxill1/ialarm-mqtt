@@ -1,15 +1,16 @@
 /* eslint-disable no-template-curly-in-string */
-const YAML = require('yaml')
-const fs = require('fs')
-const path = require('path')
+import { MeianLogger } from 'ialarm'
+import YAML from 'yaml'
+import fs from 'fs'
+import path from 'path'
 
-const loggerBasic = require('ialarm/src/logger')('info')
+const loggerBasic = MeianLogger('info')
 
 /**
 * Add to config all default values if missing
 */
 function initDefaults (config, configFile) {
-  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+  const logger = MeianLogger(config.verbose ? 'debug' : 'info')
 
   /**
        * Check or init a config value
@@ -250,7 +251,7 @@ function initDefaults (config, configFile) {
   }
 }
 
-module.exports = {
+export const configHandler = {
 
   /**
      * read hassos addon options file and merge with missing config

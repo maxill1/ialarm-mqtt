@@ -1,7 +1,7 @@
 #!/usr/bin/env node
+import { ialarmMqtt } from '../index.js'
+import { configHandler } from '../utils/config-handler.js'
 
-const ialarmMqtt = require('../')
-const configHandler = require('../utils/config-handler')
 try {
   const parseArgs = function (cmdArgs) {
     const data = {}
