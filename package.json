@@ -8,8 +8,8 @@
         "url": "git://github.com/maxill1/ialarm-mqtt.git"
     },
     "dependencies": {
-        "ialarm": "^0.5.1",
-        "mqtt": "^4.2.8",
+        "ialarm": "^0.6.0",
+        "mqtt": "^4.3.7",
         "yaml": "^1.10.2"
     },
     "main": "index.js",
