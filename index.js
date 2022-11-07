@@ -12,6 +12,7 @@ export const ialarmMqtt = (config) => {
   }
 
   let errorCount = 0
+  let discovered = false
 
   const publisher = new MqttPublisher(config)
 
@@ -125,7 +126,7 @@ export const ialarmMqtt = (config) => {
       })
 
       // once received GetNet and GetZones we are ready to start discovery
-      if (isResponseValid(payload.GetNet) && zonesCache.zones) {
+      if (zonesCache.zones && !discovered) {
       // home assistant discovery (if enabled)
         discovery(config.hadiscovery.enabled)
       }
@@ -216,7 +217,7 @@ export const ialarmMqtt = (config) => {
 
     // alarm is responding
     if (zonesResponse.status && zonesResponse.zones) {
-      publisher.publishError('OK')
+      publisher.publishConnectionStatus(!MeianConnection.status.isDisconnected(), 'OK')
     }
   }
 
@@ -268,7 +269,7 @@ export const ialarmMqtt = (config) => {
   socket.onError(async (error) => {
     errorCount++
     // clean errors
-    publisher.publishError(error.message || 'Generic error')
+    publisher.publishConnectionStatus(!MeianConnection.status.isDisconnected(), error.message || 'Generic error')
 
     logger.info(`Error ${error.message} - ${JSON.stringify(error.stack)}`)
 
@@ -297,7 +298,7 @@ export const ialarmMqtt = (config) => {
       msg = e.message
     }
     const stack = e.stack ? JSON.stringify(e.stack) : ''
-    publisher.publishError(msg, stack)
+    publisher.publishConnectionStatus(!MeianConnection.status.isDisconnected(), msg, stack)
   }
 
   function getZoneCache (id) {
@@ -388,9 +389,6 @@ export const ialarmMqtt = (config) => {
 
     // publish sensors
     publisher.publishStateSensor(zones)
-
-    // clears errors
-    // publisher.publishError()
   }
 
   async function armDisarm (commandType, numArea) {
@@ -454,13 +452,14 @@ export const ialarmMqtt = (config) => {
 
   function discovery (enabled) {
     // clean errors
-    publisher.publishError('OK')
+    publisher.publishConnectionStatus(!MeianConnection.status.isDisconnected(), 'OK')
 
     // home assistant mqtt discovery (if not enabled it will reset all /config topics)
     publisher.publishHomeAssistantMqttDiscovery(Object.values(zonesCache.zones), enabled, config.deviceInfo)
     if (!enabled) {
       logger.warn('Home assistant discovery disabled (empty config.hadiscovery)')
     }
+    discovered = true
   }
 
   function resetCache () {
@@ -525,7 +524,7 @@ export const ialarmMqtt = (config) => {
       logger.info(`Status polling every ${config.server.polling_status}ms`)
       pollings.push(setInterval(function () {
         if ((!zonesCache.zones || zonesCache.zones.length === 0) && !config.deviceInfo) {
-          publisher.publishError('Missing network and zone infos')
+          publisher.publishConnectionStatus(!MeianConnection.status.isDisconnected(), 'Missing network and zone infos')
           return
         }
         fetchStatus()

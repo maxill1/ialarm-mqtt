@@ -1,4 +1,5 @@
 import { MeianLogger } from 'ialarm'
+import IAlarmHaDiscovery from './mqtt-hadiscovery.js'
 import { configHandler } from './config-handler.js'
 import mqtt from 'mqtt'
 
@@ -430,15 +431,22 @@ export const MqttPublisher = function (config) {
     _publish(m.topic, m.payload)
   }
 
-  this.publishError = function (errorMessage, stack) {
+  this.publishConnectionStatus = function (connected, errorMessage, stack) {
     if (errorMessage) {
-      logger.error(`Publishing error: ${errorMessage}`, stack)
+      logger.error(`Publishing connection status: ${errorMessage}`, stack)
     }
-    _publish(config.topics.error, {
-      message: errorMessage,
-      stack,
-      date: new Date()
 
+    _publish(config.topics.alarm.configStatus, {
+      cacheClear: 'OFF',
+      discoveryClear: 'OFF',
+      cancel: 'OFF',
+      connectionStatus: {
+        // online if connected, auth, busy or ready
+        connected,
+        message: errorMessage || 'OK',
+        stack: stack || '',
+        date: new Date()
+      }
     })
   }
 
@@ -451,7 +459,6 @@ export const MqttPublisher = function (config) {
 
   this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
     // Reset of 128 zones
-    const IAlarmHaDiscovery = require('./mqtt-hadiscovery')
     const messages = new IAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages()
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index]

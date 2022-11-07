@@ -3,7 +3,48 @@ server:
   port: 18034
   username: admin
   password: password
-  zones: 40
+  zones:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+  showUnnamedZones: true
   areas: 1
   delay: 200
   polling_status: 5000
@@ -26,7 +67,6 @@ verbose: false
 name: ""
 topics:
   availability: ialarm/alarm/availability
-  error: ialarm/alarm/error
   alarm:
     command: ialarm/alarm/area/${areaId}/set
     state: ialarm/alarm/state
@@ -93,7 +133,7 @@ hadiscovery:
   topics:
     alarmConfig: ${discoveryPrefix}/alarm_control_panel/ialarm_${areaId}/config
     eventsConfig: ${discoveryPrefix}/sensor/ialarm/events/config
-    errorConfig: ${discoveryPrefix}/sensor/ialarm/error/config
+    connectionConfig: ${discoveryPrefix}/binary_sensor/ialarm/connection/config
     sensorConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config
     sensorBatteryConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config
     sensorAlarmConfig: ${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config

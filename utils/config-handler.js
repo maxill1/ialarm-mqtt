@@ -3,6 +3,7 @@ import { MeianLogger } from 'ialarm'
 import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
 const loggerBasic = MeianLogger('info')
 
@@ -65,7 +66,6 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['mqtt', 'retain'], 0, true)
     _checkConfig(config, ['topics'], 0, {})
     _checkConfig(config, ['topics', 'availability'], 0, 'ialarm/alarm/availability')
-    _checkConfig(config, ['topics', 'error'], 0, 'ialarm/alarm/error')
     _checkConfig(config, ['topics', 'alarm'], 0, {})
     _checkConfig(config, ['topics', 'alarm', 'command'], 0, 'ialarm/alarm/area/${areaId}/set')
     _checkConfig(config, ['topics', 'alarm', 'state'], 0, 'ialarm/alarm/state')
@@ -140,7 +140,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['hadiscovery', 'topics'], 0, {})
     _checkConfig(config, ['hadiscovery', 'topics', 'alarmConfig'], 0, '${discoveryPrefix}/alarm_control_panel/ialarm_${areaId}/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'eventsConfig'], 0, '${discoveryPrefix}/sensor/ialarm/events/config')
-    _checkConfig(config, ['hadiscovery', 'topics', 'errorConfig'], 0, '${discoveryPrefix}/sensor/ialarm/error/config')
+    _checkConfig(config, ['hadiscovery', 'topics', 'connectionConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm/connection/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/fault/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorBatteryConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/battery/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'sensorAlarmConfig'], 0, '${discoveryPrefix}/binary_sensor/ialarm_zone_${zoneId}/alarm/config')
@@ -262,7 +262,8 @@ export const configHandler = {
     // merge default config.json with options.json
 
     loggerBasic.info('Trying to merge HASSOS options file (' + optionsFile + ') with default config.json')
-    const hassos = require(optionsFile)
+    const file = fs.readFileSync(optionsFile, 'utf8')
+    const hassos = JSON.parse(file)
 
     // default file
     const baseDir = path.join(__dirname, '/../')
@@ -298,7 +299,8 @@ export const configHandler = {
     if (configPath.endsWith('.json')) {
       configFile = configPath
       loggerBasic.info('Found external json configuration file ', configPath)
-      config = require(configFile)
+      const file = fs.readFileSync(configFile, 'utf8')
+      config = JSON.parse(file)
     } else if (configPath.endsWith('.yaml')) {
       configFile = configPath
       loggerBasic.info('Found external yaml configuration file', configPath)
@@ -319,7 +321,8 @@ export const configHandler = {
         loggerBasic.info('Searching external config.json in path', configPath)
         // loading external file
         configFile = configPath + 'config.json'
-        config = require(configFile)
+        const file = fs.readFileSync(configFile, 'utf8')
+        config = JSON.parse(file)
       }
     }
     // init missing config
@@ -327,19 +330,28 @@ export const configHandler = {
   },
 
   generateDefaultYaml: function (templateFile) {
-    const config = initDefaults(templateFile ? require(templateFile) : require('../templates/tmpl.config.json'), templateFile || 'test.json')
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = path.dirname(__filename)
+
+    const baseDir = path.join(__dirname, '../')
+    let file
+    if (templateFile) {
+      file = fs.readFileSync(templateFile, 'utf8')
+    } else {
+      file = fs.readFileSync(path.join(baseDir, 'templates/tmpl.config.json'), 'utf8')
+    }
+
+    const config = initDefaults(JSON.parse(file), templateFile || 'test.json')
 
     const doc = new YAML.Document()
     doc.contents = {
       ...config
     }
 
-    const baseDir = path.join(__dirname, '/../')
-
     // const json = JSON.stringify(config)
     const yamlContent = doc.toString()
 
-    fs.writeFile(`${baseDir}/templates/full.config.yaml`, yamlContent, 'utf8', function (err) {
+    fs.writeFile(path.join(baseDir, 'templates/full.config.yaml'), yamlContent, 'utf8', function (err) {
       if (err) {
         loggerBasic.error('An error occured while writing Yaml to File.')
         return
