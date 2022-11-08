@@ -19,6 +19,9 @@ https://github.com/maxill1/ialarm-mqtt/wiki/Installation
 edit [config.yaml](templates/tmpl.config.yaml) and adjust "mqtt" and "server" settings according to your need:
 https://github.com/maxill1/ialarm-mqtt/wiki/Configuration
 
+## Troubleshooting:
+Common issues and hints: https://github.com/maxill1/ialarm-mqtt/wiki/Troubleshooting
+
 ## Home assistant integration
 Go here for some info and example.
 https://github.com/maxill1/ialarm-mqtt/wiki/Home-Assistant-Integration
