@@ -8,8 +8,7 @@
         "zones": [
             17
         ],
-        "polling_status": 5000,
-        "polling_events": 10000
+        "polling_status": 5000
     },
     "mqtt": {
         "host": "192.168.1.82",
