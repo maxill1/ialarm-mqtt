@@ -1,11 +1,11 @@
 /* eslint-disable no-template-curly-in-string */
 
-const pjson = require('../package.json')
-const configHandler = require('./config-handler')
-const constants = require('ialarm/src/constants')
+import { MeianConstants, MeianLogger } from 'ialarm'
+import { configHandler }  from './config-handler.js'
+import pjson from '../package.json' assert { type: 'json' }
 
-module.exports = function (config, zonesToConfig, reset, deviceInfo) {
-  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+export default function (config, zonesToConfig, reset, deviceInfo) {
+  const logger = MeianLogger(config.verbose ? 'debug' : 'info')
 
   const alarmId = `alarm_mqtt_${(deviceInfo && deviceInfo.mac && deviceInfo.mac.split(':').join('')) || 'meian'}`
 
@@ -16,6 +16,11 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     name: `${config.name || deviceInfo.name || 'Meian alarm'}`,
     sw_version: `ialarm-mqtt ${pjson.version}`
   }
+  /*
+  causes in validate_mapping raise er.MultipleInvalid(errors) voluptuous.error.MultipleInvalid: expected a list @ data['device']['connections'][0]
+  if(deviceInfo.mac){
+    deviceConfig.connections = ['mac', deviceInfo.mac.toLowerCase()]
+  }*/
 
   function getZoneDevice (zone) {
     return {
@@ -205,24 +210,26 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
      * Error log
      * @returns
      */
-  const configSensorError = function () {
+  const configConnectionStatus = function () {
     let payload = ''
     if (!reset) {
       payload = {
-        name: `${deviceConfig.name} comunication error`,
+        name: `${deviceConfig.name} comunication status`,
         availability: getAvailability(),
-        state_topic: config.topics.error,
-        value_template: '{{value_json.message}}',
-        json_attributes_topic: config.topics.error,
-        json_attributes_template: '{{ value_json | tojson }}',
-        unique_id: `${alarmId}_comunication_error`,
+        state_topic: config.topics.alarm.configStatus,
+        value_template: '{{value_json.connectionStatus.connected}}',
+        payload_on: true,
+        payload_off: false,
+        json_attributes_topic: config.topics.alarm.configStatus,
+        json_attributes_template: '{{ value_json.connectionStatus | tojson }}',
+        unique_id: `${alarmId}_connection_status`,
         icon: 'mdi:alert-circle',
         device: deviceConfig,
         qos: config.hadiscovery.sensors_qos
       }
     }
     return {
-      topic: _getTopic(config.hadiscovery.topics.errorConfig),
+      topic: _getTopic(config.hadiscovery.topics.connectionConfig),
       payload
     }
   }
@@ -408,9 +415,11 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     // cleanup old topics structures
     if (reset) {
       messages.push(configCleanup('${discoveryPrefix}/alarm_control_panel/ialarm/config'))
+      messages.push(configCleanup('${discoveryPrefix}/sensor/ialarm/error/config'))
+      messages.push(configCleanup('ialarm/alarm/error')) 
     }
 
-    for (let i = 0; i < constants.maxZones; i++) {
+    for (let i = 0; i < MeianConstants.maxZones; i++) {
       let zone
       if (reset) {
         zone = { id: i + 1 }
@@ -453,8 +462,8 @@ module.exports = function (config, zonesToConfig, reset, deviceInfo) {
     messages.push(configSwitchClearCache())
     messages.push(configSwitchClearDiscovery())
 
-    // errors
-    messages.push(configSensorError())
+    // ok/errors
+    messages.push(configConnectionStatus())
 
     if (reset || configHandler.isFeatureEnabled(config, 'armDisarm')) {
     // cancel alarm triggered ( TODO multiple switch for all areas?)

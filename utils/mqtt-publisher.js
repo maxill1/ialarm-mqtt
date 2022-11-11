@@ -1,8 +1,10 @@
-const mqtt = require('mqtt')
-const configHandler = require('./config-handler')
+import { MeianLogger } from 'ialarm'
+import IAlarmHaDiscovery from './mqtt-hadiscovery.js'
+import { configHandler } from './config-handler.js'
+import mqtt from 'mqtt'
 
-module.exports = function (config) {
-  const logger = require('ialarm/src/logger')(config.verbose ? 'debug' : 'info')
+export const MqttPublisher = function (config) {
+  const logger = MeianLogger(config.verbose ? 'debug' : 'info')
 
   let client
 
@@ -35,7 +37,14 @@ module.exports = function (config) {
 
   const _resetCache = function (topic) {
     if (topic) {
-      _cache.data[topic]
+      _cache.data[topic].lastChecked = 0
+    } else if (_cache.data) {
+      for (const key in _cache.data) {
+        const item = _cache.data[key]
+        if (item) {
+          item.lastChecked = 0
+        }
+      }
     } else {
       _cache.data = {}
     }
@@ -49,7 +58,7 @@ module.exports = function (config) {
       const values = config.payloads.alarmDecoder
       if (values && currentStatus) {
         for (const key in values) {
-          if (values.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(values, key)) {
             const item = values[key]
             if (Array.isArray(item)) {
               for (let index = 0; index < item.length; index++) {
@@ -113,17 +122,19 @@ module.exports = function (config) {
   }
 
   const _sameObject = function (obj1, obj2) {
-    if (Object.keys(obj1).length != Object.keys(obj2).length) {
+    if (Object.keys(obj1).length !== Object.keys(obj2).length) {
       return false
     }
     for (const key in obj1) {
-      // ignoring lastChecked
-      if (key === 'lastChecked') {
-        continue
-      }
-      if (obj1.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj1, key)) {
         const value1 = obj1[key]
         const value2 = obj2[key]
+
+        // ignoring lastChecked only if has a valid value on both
+        if (key === 'lastChecked' && value1 > 0 && value2 > 0) {
+          continue
+        }
+
         if (typeof value1 !== typeof value2) {
           return false
         }
@@ -174,7 +185,7 @@ module.exports = function (config) {
     client = mqtt.connect('mqtt://' + config.mqtt.host + ':' + config.mqtt.port, {
       username: config.mqtt.username,
       password: config.mqtt.password,
-      clientId: clientId,
+      clientId,
       will: { topic: config.topics.availability, payload: config.payloads.alarmNotvailable }
     })
 
@@ -186,11 +197,11 @@ module.exports = function (config) {
       ]
       // arm/disarm/cancel
       if (configHandler.isFeatureEnabled(config, 'armDisarm')) {
-        topicsToSubscribe.push(config.topics.alarm.command.replace('${areaId}', '+'))
+        topicsToSubscribe.push(getAreaTopic(config.topics.alarm.command, '+'))
       }
       // bypass
       if (configHandler.isFeatureEnabled(config, 'bypass')) {
-        topicsToSubscribe.push(config.topics.alarm.bypass.replace('${zoneId}', '+'))
+        topicsToSubscribe.push(getZoneTopic(config.topics.alarm.bypass, '+'))
       }
 
       if (topicsToSubscribe.length > 0) {
@@ -220,7 +231,7 @@ module.exports = function (config) {
       if (topic === config.topics.alarm.discovery) { // any payload
         logger.info('Requested new HA discovery...')
         if (alarmCommands.discovery && command) {
-          const on = command && (command.toLowerCase() === 'on' || command === 1 || command == 'true')
+          const on = command && (command.toLowerCase() === 'on' || command === 1 || command === 'true' || command === true)
           alarmCommands.discovery(on)
         }
         _publish(config.topics.alarm.configStatus, {
@@ -241,6 +252,7 @@ module.exports = function (config) {
         // arm/disarm topic
         const armRegex = new RegExp(config.topics.alarm.command
           .replace('/', '/')
+          /* eslint-disable-next-line no-template-curly-in-string */
           .replace('${areaId}', '(\\d{1,2})'), 'gm')
         const armMatch = armRegex.exec(topic)
         if (armMatch) {
@@ -258,6 +270,7 @@ module.exports = function (config) {
         // "ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
         const topicRegex = new RegExp(config.topics.alarm.bypass
           .replace('/', '/')
+        /* eslint-disable-next-line no-template-curly-in-string */
           .replace('${zoneId}', '(\\d{1,2})'), 'gm')
         const match = topicRegex.exec(topic)
         if (match) {
@@ -307,6 +320,20 @@ module.exports = function (config) {
     })
   }
 
+  function getSensorTopic (zoneId) {
+    return getZoneTopic(config.topics.sensors.zone.state, zoneId)
+  }
+
+  function getZoneTopic (topic, zoneId) {
+    // eslint-disable-next-line no-template-curly-in-string
+    return topic && topic.replace('${zoneId}', zoneId)
+  }
+
+  function getAreaTopic (topic, areaId) {
+    // eslint-disable-next-line no-template-curly-in-string
+    return topic && topic.replace('${areaId}', areaId)
+  }
+
   this.publishStateSensor = function (zones) {
     if (!zones) {
       logger.info('No zone found to publish')
@@ -332,7 +359,7 @@ module.exports = function (config) {
       for (let i = 0; i < configuredZones; i++) {
         const zone = zones[i]
         // full zone status (only if changed)
-        _publishAndLog(config.topics.sensors.zone.state.replace('${zoneId}', zone.id), zone)
+        this.publishSensor(zone)
       }
     }
 
@@ -351,13 +378,37 @@ module.exports = function (config) {
         }
 
         // single zone properties
-        if (publishZonesProperties) {
-          pub(config.topics.sensors.zone.alarm.replace('${zoneId}', zone.id), zone.alarm ? config.payloads.sensorOn : config.payloads.sensorOff)
-          pub(config.topics.sensors.zone.active.replace('${zoneId}', zone.id), zone.bypass ? config.payloads.sensorOn : config.payloads.sensorOff)
-          pub(config.topics.sensors.zone.lowBattery.replace('${zoneId}', zone.id), zone.lowbat ? config.payloads.sensorOn : config.payloads.sensorOff)
-          pub(config.topics.sensors.zone.fault.replace('${zoneId}', zone.id), zone.fault ? config.payloads.sensorOn : config.payloads.sensorOff)
-        }
+        pub(getZoneTopic(config.topics.sensors.zone.alarm, zone.id), zone.alarm ? config.payloads.sensorOn : config.payloads.sensorOff)
+        pub(getZoneTopic(config.topics.sensors.zone.active, zone.id), zone.bypass ? config.payloads.sensorOn : config.payloads.sensorOff)
+        pub(getZoneTopic(config.topics.sensors.zone.lowBattery, zone.id), zone.lowbat ? config.payloads.sensorOn : config.payloads.sensorOff)
+        pub(getZoneTopic(config.topics.sensors.zone.fault, zone.id), zone.fault ? config.payloads.sensorOn : config.payloads.sensorOff)
       }
+    }
+  }
+
+  /**
+   * publish single sensor state
+   * @param {*} zone
+   */
+  this.publishSensor = function (zoneData) {
+    _publishAndLog(getSensorTopic(zoneData.id), zoneData)
+  }
+
+  /**
+   * publish single sensor state using cache and updating only changed properties (example: push notification)
+   * @param {*} zoneId
+   * @param {*} changed
+   */
+  this.updateStateSensor = function (zoneId, changed) {
+    if (changed) {
+      const topic = getSensorTopic(zoneId)
+      const zoneData = (_cache.data[topic] || { payload: { id: zoneId } }).payload
+      this.publishSensor({
+        ...zoneData,
+        ...changed
+      })
+      // allows next GetByWay to send full data
+      _resetCache(topic)
     }
   }
 
@@ -373,22 +424,29 @@ module.exports = function (config) {
     _publishAndLog(config.topics.alarm.state, status)
   }
 
-  this.publishAvailable = function () {
+  this.publishAvailable = function (presence) {
     const m = {}
     m.topic = config.topics.availability
-    m.payload = config.payloads.alarmAvailable
+    m.payload = presence ? config.payloads.alarmAvailable : config.payloads.alarmNotvailable
     _publish(m.topic, m.payload)
   }
 
-  this.publishError = function (errorMessage, stack) {
+  this.publishConnectionStatus = function (connected, errorMessage, stack) {
     if (errorMessage) {
-      logger.error(`Publishing error: ${errorMessage}`, stack)
+      logger.error(`Publishing connection status: ${errorMessage}`, stack)
     }
-    _publish(config.topics.error, {
-      message: errorMessage,
-      stack: stack,
-      date: new Date()
 
+    _publish(config.topics.alarm.configStatus, {
+      cacheClear: 'OFF',
+      discoveryClear: 'OFF',
+      cancel: 'OFF',
+      connectionStatus: {
+        // online if connected, auth, busy or ready
+        connected,
+        message: errorMessage || 'OK',
+        stack: stack || '',
+        date: new Date()
+      }
     })
   }
 
@@ -401,7 +459,6 @@ module.exports = function (config) {
 
   this.publishHomeAssistantMqttDiscovery = function (zones, on, deviceInfo) {
     // Reset of 128 zones
-    const IAlarmHaDiscovery = require('./mqtt-hadiscovery')
     const messages = new IAlarmHaDiscovery(config, zones, true, deviceInfo).createMessages()
     for (let index = 0; index < messages.length; index++) {
       const m = messages[index]

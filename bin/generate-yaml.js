@@ -1,2 +1,2 @@
-const configHandler = require('../utils/config-handler')
+import { configHandler } from '../utils/config-handler.js'
 configHandler.generateDefaultYaml()
