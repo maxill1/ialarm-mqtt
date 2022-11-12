@@ -7,6 +7,14 @@ import { fileURLToPath } from 'url'
 
 const loggerBasic = MeianLogger('info')
 
+function getBaseDir () {
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = path.dirname(__filename)
+
+  const baseDir = path.join(__dirname, '../')
+  return baseDir
+}
+
 /**
 * Add to config all default values if missing
 */
@@ -33,7 +41,7 @@ function initDefaults (config, configFile) {
     if (!exists) {
       if (defaultValue !== undefined && index === paths.length - 1) {
         // create default
-        logger.warn(`Config.json value not specified on ${configFile} using default '${defaultValue}' on ${JSON.stringify(paths)}`)
+        logger.warn(`Config value "${JSON.stringify(paths)}" missing on ${configFile} using default: "${defaultValue}"`)
         object[key] = defaultValue
       } else {
         throw new Error(`subscribe error: ${configFile} is missing ${paths[index]} on ${JSON.stringify(paths)}. See: ${JSON.stringify(config.topics)}`)
@@ -45,7 +53,7 @@ function initDefaults (config, configFile) {
   if (config) {
     // checks
     _checkConfig(config, ['verbose'], 0, false)
-    _checkConfig(config, ['name'], 0, '')
+    _checkConfig(config, ['name'], 0, 'Alarm')
     _checkConfig(config, ['server', 'host'])
     _checkConfig(config, ['server', 'port'])
     _checkConfig(config, ['server', 'username'])
@@ -55,7 +63,6 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['server', 'areas'], 0, 1)
     _checkConfig(config, ['server', 'delay'], 0, 200)
     _checkConfig(config, ['server', 'polling_status'], 0, (config.server && config.server.polling && config.server.polling.status) || 5000)
-    _checkConfig(config, ['server', 'polling_events'], 0, (config.server && config.server.polling && config.server.polling.events) || 10000)
     _checkConfig(config, ['server', 'features'], 0, ['armDisarm', 'sensors', 'events', 'bypass', 'zoneNames'])
     _checkConfig(config, ['mqtt', 'port'])
     _checkConfig(config, ['mqtt', 'host'])
@@ -266,7 +273,7 @@ export const configHandler = {
     const hassos = JSON.parse(file)
 
     // default file
-    const baseDir = path.join(__dirname, '/../')
+    const baseDir = getBaseDir()
     const config = YAML.parse(fs.readFileSync(`${baseDir}/templates/full.config.yaml`, 'utf8'))
 
     // merge main nodes
@@ -330,10 +337,7 @@ export const configHandler = {
   },
 
   generateDefaultYaml: function (templateFile) {
-    const __filename = fileURLToPath(import.meta.url)
-    const __dirname = path.dirname(__filename)
-
-    const baseDir = path.join(__dirname, '../')
+    const baseDir = getBaseDir()
     let file
     if (templateFile) {
       file = fs.readFileSync(templateFile, 'utf8')

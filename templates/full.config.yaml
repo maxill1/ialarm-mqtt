@@ -48,7 +48,6 @@ server:
   areas: 1
   delay: 200
   polling_status: 5000
-  polling_events: 10000
   features:
     - armDisarm
     - sensors

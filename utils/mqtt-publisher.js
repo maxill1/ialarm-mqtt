@@ -76,7 +76,7 @@ export const MqttPublisher = function (config) {
         }
       }
     } catch (error) {
-      logger.error('error')
+      logger.error(`error ${error && error.message}`)
     }
     return status
   }
@@ -433,7 +433,7 @@ export const MqttPublisher = function (config) {
 
   this.publishConnectionStatus = function (connected, errorMessage, stack) {
     if (errorMessage) {
-      logger.error(`Publishing connection status: ${errorMessage}`, stack)
+      logger.debug(`Publishing connection status: ${errorMessage}`, stack)
     }
 
     _publish(config.topics.alarm.configStatus, {
