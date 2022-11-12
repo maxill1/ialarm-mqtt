@@ -1,6 +1,6 @@
 {
     "name": "ialarm-mqtt",
-    "version": "0.11.0",
+    "version": "0.11.1",
     "description": "ialarm to mqtt bridge",
     "type": "module",
     "repository": {
