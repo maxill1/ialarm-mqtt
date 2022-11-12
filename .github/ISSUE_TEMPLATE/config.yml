@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ialarm-mqtt addon issues
+    url: https://github.com/maxill1/addons/issues
+    about: Issues related to the ialarm-mqtt addon for HA (make sure it's related to the addon and not to the ialarm-mqtt itself).    
+  - name: node-ialarm issues
+    url: https://github.com/maxill1/node-ialarm/issues
+    about: Issues related to node-ialarm library.
+  - name: node-red-contrib-ialarm issues
+    url: https://github.com/maxill1/node-red-contrib-ialarm/issues
+    about: Issues related to node-red ialarm plugin
+  - name: Questions/discussion
+    url: https://github.com/maxill1/ialarm-mqtt/discussions/new
+    about: Ask questions, discuss about devices or show things you made
+  - name: FAQ
+    url: https://github.com/maxill1/ialarm-mqtt/wiki/Troubleshooting
+    about: Frequently asked questions and troubleshooting.

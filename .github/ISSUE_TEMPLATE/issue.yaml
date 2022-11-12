@@ -1,14 +1,14 @@
-name: Bug Report
-description: File a bug report
-title: "[Bug]: "
-labels: ["bug", "triage"]
+name: ialarm-mqtt issues
+description: Report issues related to ialarm-mqtt
+title: "[bug]: "
+labels: ["bug"]
 assignees:
-  - octocat
+  - maxill1
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        Thanks for taking the time to fill out this issue report!
   - type: dropdown
     id: version
     attributes:
@@ -16,7 +16,7 @@ body:
       description: What version of our software are you running?
       options:
         - 0.10.1 (Default)
-        - 0.11.1 (Edge)
+        - 0.11.1 (Edge/Development)
     validations:
       required: true        
   - type: textarea
@@ -37,6 +37,15 @@ body:
         - Hass.io addon
         - docker
         - node/npx
+      required: true  
+  - type: input
+    id: alarm
+    attributes:
+      label: Alarm panel model
+      description: Brand and version of your alarm panel (antifurto365, casasicura, meian, focus, and)
+      placeholder: ex. Focus FC-7688Plus
+    validations:
+      required: true    
   - type: textarea
     id: logs
     attributes:
