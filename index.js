@@ -92,8 +92,19 @@ export const ialarmMqtt = (config) => {
         parseZones(payload.GetZone)
       }
 
+      try {
+        if (commandResponse.payloads?.rawData && commandResponse.payloads?.rawData?.GetArea) {
+          logger.info(`******** DEBUG ******* GetArea RAW: ${JSON.stringify(commandResponse.payloads?.rawData?.GetArea)}`)
+        }
+      } catch (error) {
+        logger.info(`******** DEBUG ******* GetArea payload: ${JSON.stringify(commandResponse)}`)
+      }
+
       // status and sensors
       if ((payload.GetAlarmStatus || payload.GetArea) && payload.GetByWay) {
+        if (payload.GetArea) {
+          logger.info(`******** DEBUG ******* GetArea formatted: ${JSON.stringify(payload.GetArea)}`)
+        }
         parseStatusAndSensors(payload.GetAlarmStatus || payload.GetArea, payload.GetByWay, payload.GetZone || zonesCache.zones)
       }
 

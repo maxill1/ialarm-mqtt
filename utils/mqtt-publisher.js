@@ -76,7 +76,7 @@ export const MqttPublisher = function (config) {
         }
       }
     } catch (error) {
-      logger.error(`error ${error && error.message}`)
+      logger.error(`error decoding status: ${error && error.message} on ${JSON.stringify(status)}`)
     }
     return status
   }
@@ -417,6 +417,9 @@ export const MqttPublisher = function (config) {
       for (const statusNumber in status) {
         // decode status
         const areaStatus = status[statusNumber]
+        if (!(areaStatus)) {
+          logger.info(`******** DEBUG ******* No AREA STATUS on : ${statusNumber}=${JSON.stringify(areaStatus)}`)
+        }
         const alarmState = _decodeStatus(areaStatus)
         status[statusNumber] = (config.payloads.alarm && config.payloads.alarm[alarmState]) || areaStatus
       }
