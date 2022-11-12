@@ -277,6 +277,7 @@ export const configHandler = {
     const config = YAML.parse(fs.readFileSync(`${baseDir}/templates/full.config.yaml`, 'utf8'))
 
     // merge main nodes
+    config.verbose = hassos.verbose
     config.name = hassos.name
     config.server = hassos.server
     config.mqtt = hassos.mqtt
