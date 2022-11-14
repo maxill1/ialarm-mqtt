@@ -2,6 +2,7 @@ import { MeianLogger } from 'ialarm'
 import IAlarmHaDiscovery from './mqtt-hadiscovery.js'
 import { configHandler } from './config-handler.js'
 import mqtt from 'mqtt'
+import { MessageCompare } from './message-compare.js'
 
 export const MqttPublisher = function (config) {
   const logger = MeianLogger(config.verbose ? 'debug' : 'info')
@@ -82,80 +83,62 @@ export const MqttPublisher = function (config) {
   }
 
   const _publishAndLog = function (topic, data, options) {
-    let dataLog
-    if (data) {
-      if (config.verbose) {
-        dataLog = JSON.stringify(data)
-      } else if (typeof data === 'string') {
-        dataLog = data
-      } else if (Array.isArray(data)) {
-        dataLog = 'Array of ' + data.length + ' elements'
-      } else {
-        dataLog = 'Object with ' + Object.keys(data).length + ' keys'
-      }
-    } else {
-      dataLog = data
-    }
-    if (_publish(topic, data, options)) {
-      logger.info("sending topic '" + topic + "' : " + dataLog)
-    }
+    _publish(topic, data, options, true)
   }
 
   const _cacheExpireDate = function (date) {
     return new Date(date.getTime() + _cache.time)
   }
 
-  const _sameData = function (topic, obj2) {
-    // cache empty
-    if (!_cache.enabled || !_cache.data[topic] || !_cache.data[topic].lastChecked ||
-            // cache expired
-            new Date() > _cacheExpireDate(_cache.data[topic].lastChecked) ||
-            // HA config topic
-            topic.endsWith('/config')) {
+  const getMessageDiffs = function (topic, obj2) {
+    // HA config topic
+    if (topic.endsWith('/config')) {
       // needs republishing
-      return false
+      return ['config']
+    }
+
+    // cache empty or expired
+    const expired = !_cache.enabled ||
+      !_cache.data[topic] ||
+      !_cache.data[topic].lastChecked ||
+      // cache expired
+      new Date() > _cacheExpireDate(_cache.data[topic].lastChecked)
+    if (expired) {
+      // needs republishing
+      return ['expired']
     }
 
     // deep check
     const obj1 = _cache.data[topic].payload
-    return _sameObject(obj1, obj2)
+    return MessageCompare(obj1, obj2)
   }
 
-  const _sameObject = function (obj1, obj2) {
-    if (Object.keys(obj1).length !== Object.keys(obj2).length) {
-      return false
-    }
-    for (const key in obj1) {
-      if (Object.prototype.hasOwnProperty.call(obj1, key)) {
-        const value1 = obj1[key]
-        const value2 = obj2[key]
+  const _publish = function (topic, data, options, verboseLog) {
+    const differences = getMessageDiffs(topic, data)
 
-        // ignoring lastChecked only if has a valid value on both
-        if (key === 'lastChecked' && value1 > 0 && value2 > 0) {
-          continue
+    let dataLog
+    if (verboseLog) {
+      if (data) {
+        if (config.verbose) {
+          dataLog = JSON.stringify(data)
+        } else if (typeof data === 'string') {
+          dataLog = data
+        } else if (Array.isArray(data)) {
+          dataLog = 'Array of ' + data.length + ' elements'
+        } else {
+          dataLog = 'Object with ' + Object.keys(data).length + ' keys'
         }
-
-        if (typeof value1 !== typeof value2) {
-          return false
-        }
-        if (typeof value1 === 'object') {
-          // checking childs
-          if (!_sameObject(value1, value2)) {
-            return false
-          }
-          // next
-        } else if (value1 !== value2) {
-          return false
-        }
+      } else {
+        dataLog = data
       }
     }
-    // assuming it's the same object
-    return true
-  }
 
-  const _publish = function (topic, data, options) {
-    if (_sameData(topic, data)) {
-      return false
+    if (!differences || differences.length <= 0) {
+      // if (verboseLog) {
+      //   const expire = _cache.data[topic] ? _cacheExpireDate(_cache.data[topic] && _cache.data[topic].lastChecked) : 0
+      //   logger.debug(`Ignored ${topic} (expire ${expire}): same data as previous message - ${JSON.stringify(data)}`)
+      // }
+      return
     }
 
     if (client) {
@@ -170,12 +153,13 @@ export const MqttPublisher = function (config) {
       // cache the original data, ignoring config
       if (!topic.endsWith('/config')) {
         _cache.data[topic] = { payload: data, lastChecked: (data && data.lastChecked) || new Date() }
-        logger.info('Caching ' + topic + ' until ' + _cacheExpireDate(_cache.data[topic].lastChecked))
+        const expire = _cacheExpireDate(_cache.data[topic].lastChecked)
+        logger.info(`Caching ${topic} until ${expire}`)
       }
-      return true
+
+      logger.info(`sending topic '${topic}' (changed: ${JSON.stringify(differences)}): ${dataLog}`)
     } else {
       logger.error(topic + ' - error publishing...not connected')
-      return false
     }
   }
 
@@ -270,7 +254,7 @@ export const MqttPublisher = function (config) {
         // "ialarm\/alarm\/zone\/(\\d{1,2})\/bypass"
         const topicRegex = new RegExp(config.topics.alarm.bypass
           .replace('/', '/')
-        /* eslint-disable-next-line no-template-curly-in-string */
+          /* eslint-disable-next-line no-template-curly-in-string */
           .replace('${zoneId}', '(\\d{1,2})'), 'gm')
         const match = topicRegex.exec(topic)
         if (match) {
@@ -289,16 +273,16 @@ export const MqttPublisher = function (config) {
           if (!knownCommand) {
             logger.error(
               'Alarm bypass zone ' +
-                            zoneNumber +
-                            ' ignored invalid command: ' +
-                            command
+              zoneNumber +
+              ' ignored invalid command: ' +
+              command
             )
             return
           }
           const bypass =
-                        command === '1' ||
-                        command.toLowerCase() === 'true' ||
-                        command.toLowerCase() === 'on'
+            command === '1' ||
+            command.toLowerCase() === 'true' ||
+            command.toLowerCase() === 'on'
           if (bypass) {
             logger.info('Alarm bypass zone ' + zoneNumber)
           } else {
