@@ -6,7 +6,7 @@ export const MessageCompare = function (obj1, obj2) {
 
   const differences = []
 
-  const keys = [...new Set([...Object.keys(obj1), ...Object.keys(obj2)])]
+  const keys = [...new Set([...Object.keys(obj1 || {}), ...Object.keys(obj2 || {})])]
 
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]
