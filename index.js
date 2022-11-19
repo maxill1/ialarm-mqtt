@@ -440,7 +440,12 @@ export const ialarmMqtt = (config) => {
     }
 
     try {
-      if (!zoneNumber || zoneNumber > MeianConstants.maxZones) {
+      /* if (config.server.zones && !config.server.zones.includes(zoneNumber)) {
+        console.error('bypassZone: received not configured zone number: ' + zoneNumber)
+        return
+      } */
+      const maxZones = configHandler.getMaxZones()
+      if (!zoneNumber || zoneNumber > maxZones) {
         console.error('bypassZone: received invalid zone number: ' + zoneNumber)
         return
       }

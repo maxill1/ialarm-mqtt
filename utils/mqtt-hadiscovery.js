@@ -419,7 +419,9 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
       messages.push(configCleanup('ialarm/alarm/error')) 
     }
 
-    for (let i = 0; i < MeianConstants.maxZones; i++) {
+    //iterating all 128 zones
+    const maxZones = configHandler.getMaxZones()
+    for (let i = 0; i < maxZones; i++) {
       let zone
       if (reset) {
         zone = { id: i + 1 }

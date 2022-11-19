@@ -1,5 +1,5 @@
 /* eslint-disable no-template-curly-in-string */
-import { MeianLogger } from 'ialarm'
+import { MeianConstants, MeianLogger } from 'ialarm'
 import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
@@ -259,6 +259,10 @@ function initDefaults (config, configFile) {
 }
 
 export const configHandler = {
+
+  getMaxZones: () => {
+    return MeianConstants?.listLimit?.GetByWay || 128
+  },
 
   /**
      * read hassos addon options file and merge with missing config
