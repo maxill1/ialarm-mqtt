@@ -11,8 +11,8 @@ export const MessageCompare = function (obj1, obj2) {
   for (let index = 0; index < keys.length; index++) {
     const key = keys[index]
 
-    const value1 = obj1[key]
-    const value2 = obj2[key]
+    const value1 = obj1 ? obj1[key] : undefined
+    const value2 = obj2 ? obj2[key] : undefined
 
     // ignoring lastChecked only if has a valid value on both
     if (key === 'lastChecked') {
