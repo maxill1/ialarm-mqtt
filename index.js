@@ -126,8 +126,12 @@ export const ialarmMqtt = (config) => {
           })
         }
         // TODO UNTESTED!!! SetArea
-        if (payload.SetArea && payload.SetArea.status_1) {
-          publisher.publishStateIAlarm(payload.SetArea)
+        if (payload.SetArea && payload.SetArea.status) {
+          // { "area": 2, "status": "ARMED_HOME" }
+          const areaStatus = {}
+          const areaNum = (payload.SetArea.area || 1) + 1
+          areaStatus[`status_${areaNum}`] = payload.SetArea.status
+          publisher.publishStateIAlarm(areaStatus)
         }
 
         logger.debug(`Received response: ${JSON.stringify(commandResponse)}`)
@@ -144,7 +148,7 @@ export const ialarmMqtt = (config) => {
 
       // once received GetNet and GetZones we are ready to start discovery
       if (zonesCache.zones && !discovered) {
-      // home assistant discovery (if enabled)
+        // home assistant discovery (if enabled)
         discovery(config.hadiscovery.enabled)
       }
     } catch (error) {
@@ -362,7 +366,7 @@ export const ialarmMqtt = (config) => {
       }
       // if needed fetch zones
       if ((!zonesCache.zones || zonesCache.zones.length === 0) &&
-            configHandler.isFeatureEnabled(config, 'zoneNames')) {
+        configHandler.isFeatureEnabled(config, 'zoneNames')) {
         commands.push('GetZone')
       }
 

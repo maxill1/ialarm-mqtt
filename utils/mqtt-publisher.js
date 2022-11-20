@@ -397,7 +397,14 @@ export const MqttPublisher = function (config) {
   }
 
   this.publishStateIAlarm = function (status) {
+    const topic = config.topics.alarm.state
     if (status) {
+      // merging old statuses (status_1, status_2, etc) and new status (status_1, status_3, etc)
+      const oldStatus = (_cache.data[topic] || { payload: { } }).payload
+      status = {
+        ...oldStatus,
+        ...status
+      }
       for (const statusNumber in status) {
         // decode status
         const areaStatus = status[statusNumber]
@@ -408,7 +415,7 @@ export const MqttPublisher = function (config) {
         status[statusNumber] = (config.payloads.alarm && config.payloads.alarm[alarmState]) || areaStatus
       }
     }
-    _publishAndLog(config.topics.alarm.state, status)
+    _publishAndLog(topic, status)
   }
 
   this.publishAvailable = function (presence) {
