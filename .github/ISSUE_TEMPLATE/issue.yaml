@@ -37,7 +37,8 @@ body:
         - Hass.io addon
         - docker
         - node/npx
-      required: true  
+    validations:
+      required: true   
   - type: input
     id: alarm
     attributes:
