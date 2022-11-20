@@ -426,7 +426,8 @@ export const ialarmMqtt = (config) => {
         publisher.resetCache()
         // command
         const commandName = config.server.areas > 1 ? 'SetArea' : 'SetAlarmStatus'
-        const commandArgs = config.server.areas > 1 ? [[numArea, alarmStatusName]] : [[alarmStatusName]]
+        // area index is 0 based
+        const commandArgs = config.server.areas > 1 ? [[parseInt(numArea) - 1, alarmStatusName]] : [[alarmStatusName]]
         executeCommand(commandName, commandArgs)
 
         if (config.debug) {
