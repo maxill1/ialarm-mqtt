@@ -1,5 +1,5 @@
 
-import { MeianSocket, MeianDataHandler, MeianConstants, MeianLogger, MeianConnection, MeianStatusDecoder } from 'ialarm'
+import { MeianSocket, MeianDataHandler, MeianLogger, MeianConnection, MeianStatusDecoder } from 'ialarm'
 import { MqttPublisher } from './utils/mqtt-publisher.js'
 import { configHandler } from './utils/config-handler.js'
 
@@ -16,7 +16,13 @@ export const ialarmMqtt = (config) => {
 
   const publisher = new MqttPublisher(config)
 
-  // TODO config.server.delay for concurrent commands
+  // if we configured 17 zone, there is no need to call GetZone or GetByWay for all 40/128 default zones
+  const maxZone = Math.max(...config.server.zones)
+  const commandsLimits = {
+    GetZone: maxZone,
+    GetByWay: maxZone,
+    GetLog: 10 // this is huge (512) and actually not used
+  }
 
   // single connection for all messages
   const socket = new MeianSocket(
@@ -25,7 +31,7 @@ export const ialarmMqtt = (config) => {
     config.server.username,
     config.server.password,
     config.verbose ? 'debug' : 'info',
-    config.server.zones
+    commandsLimits
   )
 
   function connectToAlarm () {

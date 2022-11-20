@@ -1,6 +1,6 @@
 /* eslint-disable no-template-curly-in-string */
 
-import { MeianConstants, MeianLogger } from 'ialarm'
+import { MeianLogger } from 'ialarm'
 import { configHandler }  from './config-handler.js'
 import pjson from '../package.json' assert { type: 'json' }
 
