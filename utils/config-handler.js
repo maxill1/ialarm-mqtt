@@ -1,5 +1,5 @@
 /* eslint-disable no-template-curly-in-string */
-import { MeianLogger } from 'ialarm'
+import { MeianConstants, MeianLogger } from 'ialarm'
 import YAML from 'yaml'
 import fs from 'fs'
 import path from 'path'
@@ -260,6 +260,10 @@ function initDefaults (config, configFile) {
 
 export const configHandler = {
 
+  getMaxZones: () => {
+    return MeianConstants?.listLimit?.GetByWay || 128
+  },
+
   /**
      * read hassos addon options file and merge with missing config
      * @param {*} optionsFile
@@ -277,15 +281,16 @@ export const configHandler = {
     const config = YAML.parse(fs.readFileSync(`${baseDir}/templates/full.config.yaml`, 'utf8'))
 
     // merge main nodes
+    config.verbose = hassos.verbose
     config.name = hassos.name
     config.server = hassos.server
     config.mqtt = hassos.mqtt
 
     // merge hadiscovery values
-    config.hadiscovery.code = hassos.code || ''
-    config.hadiscovery.zoneName = hassos.zoneName || 'Zone'
-    config.hadiscovery.events = hassos.events
-    config.hadiscovery.bypass = hassos.bypass
+    config.hadiscovery.code = hassos.code || hassos.hadiscovery.code || ''
+    config.hadiscovery.zoneName = hassos.zoneName || hassos.hadiscovery.zoneName || 'Zone'
+    config.hadiscovery.events = hassos.events || hassos.hadiscovery.events
+    config.hadiscovery.bypass = hassos.bypass || hassos.hadiscovery.bypass
 
     // merge zones
     config.zones = hassos.zones

@@ -1,5 +1,5 @@
 
-import { MeianSocket, MeianDataHandler, MeianConstants, MeianLogger, MeianConnection, MeianStatusDecoder } from 'ialarm'
+import { MeianSocket, MeianDataHandler, MeianLogger, MeianConnection, MeianStatusDecoder } from 'ialarm'
 import { MqttPublisher } from './utils/mqtt-publisher.js'
 import { configHandler } from './utils/config-handler.js'
 
@@ -16,7 +16,13 @@ export const ialarmMqtt = (config) => {
 
   const publisher = new MqttPublisher(config)
 
-  // TODO config.server.delay for concurrent commands
+  // if we configured 17 zone, there is no need to call GetZone or GetByWay for all 40/128 default zones
+  const maxZone = Math.max(...config.server.zones)
+  const commandsLimits = {
+    GetZone: maxZone,
+    GetByWay: maxZone,
+    GetLog: 10 // this is huge (512) and actually not used
+  }
 
   // single connection for all messages
   const socket = new MeianSocket(
@@ -25,7 +31,7 @@ export const ialarmMqtt = (config) => {
     config.server.username,
     config.server.password,
     config.verbose ? 'debug' : 'info',
-    config.server.zones
+    commandsLimits
   )
 
   function connectToAlarm () {
@@ -92,6 +98,17 @@ export const ialarmMqtt = (config) => {
         parseZones(payload.GetZone)
       }
 
+      /* try {
+        if (commandResponse.payloads?.rawData && commandResponse.payloads?.rawData?.SetArea) {
+          logger.info(`******** DEBUG ******* SetArea RAW: ${JSON.stringify(commandResponse.payloads?.rawData?.SetArea)}`)
+        }
+        if (payload.SetArea) {
+          logger.info(`******** DEBUG ******* SetArea formatted: ${JSON.stringify(payload.SetArea)}`)
+        }
+      } catch (error) {
+        logger.info(`******** DEBUG ******* SetArea payload: ${JSON.stringify(commandResponse)}`)
+      } */
+
       // status and sensors
       if ((payload.GetAlarmStatus || payload.GetArea) && payload.GetByWay) {
         parseStatusAndSensors(payload.GetAlarmStatus || payload.GetArea, payload.GetByWay, payload.GetZone || zonesCache.zones)
@@ -109,8 +126,12 @@ export const ialarmMqtt = (config) => {
           })
         }
         // TODO UNTESTED!!! SetArea
-        if (payload.SetArea && payload.SetArea.status_1) {
-          publisher.publishStateIAlarm(payload.SetArea)
+        if (payload.SetArea && payload.SetArea.status) {
+          // { "area": 2, "status": "ARMED_HOME" }
+          const areaStatus = {}
+          const areaNum = (payload.SetArea.area || 1) + 1
+          areaStatus[`status_${areaNum}`] = payload.SetArea.status
+          publisher.publishStateIAlarm(areaStatus)
         }
 
         logger.debug(`Received response: ${JSON.stringify(commandResponse)}`)
@@ -127,7 +148,7 @@ export const ialarmMqtt = (config) => {
 
       // once received GetNet and GetZones we are ready to start discovery
       if (zonesCache.zones && !discovered) {
-      // home assistant discovery (if enabled)
+        // home assistant discovery (if enabled)
         discovery(config.hadiscovery.enabled)
       }
     } catch (error) {
@@ -345,7 +366,7 @@ export const ialarmMqtt = (config) => {
       }
       // if needed fetch zones
       if ((!zonesCache.zones || zonesCache.zones.length === 0) &&
-            configHandler.isFeatureEnabled(config, 'zoneNames')) {
+        configHandler.isFeatureEnabled(config, 'zoneNames')) {
         commands.push('GetZone')
       }
 
@@ -409,7 +430,8 @@ export const ialarmMqtt = (config) => {
         publisher.resetCache()
         // command
         const commandName = config.server.areas > 1 ? 'SetArea' : 'SetAlarmStatus'
-        const commandArgs = config.server.areas > 1 ? [[numArea, alarmStatusName]] : [[alarmStatusName]]
+        // area index is 0 based
+        const commandArgs = config.server.areas > 1 ? [[parseInt(numArea) - 1, alarmStatusName]] : [[alarmStatusName]]
         executeCommand(commandName, commandArgs)
 
         if (config.debug) {
@@ -429,7 +451,12 @@ export const ialarmMqtt = (config) => {
     }
 
     try {
-      if (!zoneNumber || zoneNumber > MeianConstants.maxZones) {
+      /* if (config.server.zones && !config.server.zones.includes(zoneNumber)) {
+        console.error('bypassZone: received not configured zone number: ' + zoneNumber)
+        return
+      } */
+      const maxZones = configHandler.getMaxZones()
+      if (!zoneNumber || zoneNumber > maxZones) {
         console.error('bypassZone: received invalid zone number: ' + zoneNumber)
         return
       }

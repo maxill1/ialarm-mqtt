@@ -1,4 +1,5 @@
 {
+    "verbose": true,
     "name": "iAlarm",
     "server": {
         "host": "192.168.1.81",
@@ -19,8 +20,10 @@
         "cache": "5m",
         "retain": true
     },
-    "code": null,
-    "zoneName": "Zona",
+    "hadiscovery": {
+        "code": 1234,
+        "zoneName": "Zona"
+    },
     "events": {
         "name": "last event",
         "icon": "mdi:message-alert"
