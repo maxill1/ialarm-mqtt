@@ -82,7 +82,8 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
 
       const payload = {
         ...message.payload,
-        name: zoneName + ' ' + zone.id + ' ' + zone.name,
+        //name: zoneName + ' ' + zone.id + ' ' + zone.name,
+        name: null, // if a device_class is set and the entity name is not set, it follows the device class name.
         unique_id: `${alarmId}_zone_${zone.id}`
       }
 
@@ -156,7 +157,8 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
       })
 
       payload = {
-        name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
+        //name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
+        name: null, // if a device_class is set and the entity name is not set, it follows the device class name.
         availability: getAvailability(),
         device_class: deviceClass,
         value_template: valueTemplate,
