@@ -63,7 +63,7 @@ mqtt:
   cache: 5m
   retain: true
 verbose: false
-name: ""
+name: Alarm
 topics:
   availability: ialarm/alarm/availability
   alarm:
@@ -142,6 +142,18 @@ hadiscovery:
     clearDiscoveryConfig: ${discoveryPrefix}/switch/ialarm/clear_discovery/config
     clearTriggeredConfig: ${discoveryPrefix}/switch/ialarm/clear_triggered/config
   zoneName: Zone
+  faultName: Motion
+  batteryName: Battery
+  alarmName: Alarm
+  connectivityName: Connectivity
+  cleanCacheName: Clean cache
+  cleanCacheDiscoveryName: Clean discovery
+  cleanCacheTriggeredName: Clean triggered
+  commStatusName: Communication status
+  bypassName: Bypass
+  bypassIcon: mdi:lock-open
+  eventName: Last event
+  eventIcon: mdi:message-alert
   alarm_qos: 2
   sensors_qos: 0
   code: ""
@@ -169,10 +181,4 @@ hadiscovery:
       wireless detector loss: connectivity
     default:
       device_class: safety
-  events:
-    name: last event
-    icon: mdi:message-alert
-  bypass:
-    name: Bypass
-    icon: mdi:lock-open
 zones: []

@@ -68,7 +68,7 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['mqtt', 'host'])
     _checkConfig(config, ['mqtt', 'username'])
     _checkConfig(config, ['mqtt', 'password'])
-    _checkConfig(config, ['mqtt', 'clientId'], 0, '')
+    _checkConfig(config, ['mqtt', 'clientId'], 0, 'ialarm-mqtt')
     _checkConfig(config, ['mqtt', 'cache'], 0, '5m')
     _checkConfig(config, ['mqtt', 'retain'], 0, true)
     _checkConfig(config, ['topics'], 0, {})
@@ -157,6 +157,19 @@ function initDefaults (config, configFile) {
     _checkConfig(config, ['hadiscovery', 'topics', 'clearDiscoveryConfig'], 0, '${discoveryPrefix}/switch/ialarm/clear_discovery/config')
     _checkConfig(config, ['hadiscovery', 'topics', 'clearTriggeredConfig'], 0, '${discoveryPrefix}/switch/ialarm/clear_triggered/config')
     _checkConfig(config, ['hadiscovery', 'zoneName'], 0, 'Zone')
+    _checkConfig(config, ['hadiscovery', 'faultName'], 0, 'Motion')
+    _checkConfig(config, ['hadiscovery', 'batteryName'], 0, 'Battery')
+    _checkConfig(config, ['hadiscovery', 'alarmName'], 0, 'Alarm')
+    _checkConfig(config, ['hadiscovery', 'connectivityName'], 0, 'Connectivity')
+    _checkConfig(config, ['hadiscovery', 'cleanCacheName'], 0, 'Clean cache')
+    _checkConfig(config, ['hadiscovery', 'cleanCacheDiscoveryName'], 0, 'Clean discovery')
+    _checkConfig(config, ['hadiscovery', 'cleanCacheTriggeredName'], 0, 'Clean triggered')
+    _checkConfig(config, ['hadiscovery', 'commStatusName'], 0, 'Communication status')
+    _checkConfig(config, ['hadiscovery', 'bypassName'], 0, 'Bypass')
+    _checkConfig(config, ['hadiscovery', 'bypassIcon'], 0, 'mdi:lock-open')
+    _checkConfig(config, ['hadiscovery', 'eventName'], 0, 'Last event')
+    _checkConfig(config, ['hadiscovery', 'eventIcon'], 0, 'mdi:message-alert')
+
     // fix backward compatibility for multiple alarm_qos and sensors_qos config positions...
     _checkConfig(config, ['hadiscovery', 'alarm_qos'], 0, config.topics.alarm_qos || (config.topics.alarm && config.topics.alarm.alarm_qos) || 2)
     _checkConfig(config, ['hadiscovery', 'sensors_qos'], 0, config.topics.sensors_qos || (config.topics.sensors && config.topics.sensors.sensors_qos) || 0)
@@ -211,14 +224,6 @@ function initDefaults (config, configFile) {
       7: {
         device_class: 'lock'
       }
-    })
-    _checkConfig(config, ['hadiscovery', 'events'], 0, {
-      // name: 'last event', //default is "alarm last event"
-      icon: 'mdi:message-alert'
-    })
-    _checkConfig(config, ['hadiscovery', 'bypass'], 0, {
-      name: 'Bypass',
-      icon: 'mdi:lock-open'
     })
     _checkConfig(config, ['zones'], 0, [
     //   {

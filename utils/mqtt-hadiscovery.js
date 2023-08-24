@@ -65,10 +65,9 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
      * @returns
      */
   const configSensorFault = function (zone, i) {
-    const message = configBinarySensors(zone, i, 'Motion', 'safety', 'fault', config.hadiscovery.topics.sensorConfig, false)
+    const message = configBinarySensors(zone, i, config.hadiscovery.faultName, 'safety', 'fault', config.hadiscovery.topics.sensorConfig, false)
 
     if (!reset) {
-      const zoneName = config.hadiscovery.zoneName
 
       // optional
       let icon
@@ -82,8 +81,9 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
 
       const payload = {
         ...message.payload,
-        //name: zoneName + ' ' + zone.id + ' ' + zone.name,
-        name: null, // if a device_class is set and the entity name is not set, it follows the device class name.
+        //https://developers.home-assistant.io/docs/core/entity/#has_entity_name-true-mandatory-for-new-integrations
+        // f"{device.name} {entity.name}"
+        name: config.hadiscovery.faultName, 
         unique_id: `${alarmId}_zone_${zone.id}`
       }
 
@@ -105,7 +105,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
      * @returns
      */
   const configSensorBattery = function (zone, i) {
-    return configBinarySensors(zone, i, 'Battery', 'battery', 'lowbat', config.hadiscovery.topics.sensorBatteryConfig, false)
+    return configBinarySensors(zone, i, config.hadiscovery.batteryName, 'battery', 'lowbat', config.hadiscovery.topics.sensorBatteryConfig, false)
   }
 
   /**
@@ -115,7 +115,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
      * @returns
      */
   const configSensorConnectivity = function (zone, i) {
-    return configBinarySensors(zone, i, 'Connectivity', 'connectivity', 'wirelessLoss', config.hadiscovery.topics.sensorConnectivityConfig, true)
+    return configBinarySensors(zone, i, config.hadiscovery.connectivityName, 'connectivity', 'wirelessLoss', config.hadiscovery.topics.sensorConnectivityConfig, true)
   }
 
   /**
@@ -125,7 +125,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
      * @returns
      */
   const configSensorAlarm = function (zone, i) {
-    return configBinarySensors(zone, i, 'Alarm', 'safety', 'alarm', config.hadiscovery.topics.sensorAlarmConfig, false)
+    return configBinarySensors(zone, i, config.hadiscovery.alarmName, 'safety', 'alarm', config.hadiscovery.topics.sensorAlarmConfig, false)
   }
 
   /**
@@ -157,8 +157,11 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
       })
 
       payload = {
-        //name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
-        name: null, // if a device_class is set and the entity name is not set, it follows the device class name.
+        //https://developers.home-assistant.io/docs/core/entity/#has_entity_name-true-mandatory-for-new-integrations
+        // The entity is a member of a device and entity.name is None: friendly_name = f"{device.name}"
+        // The entity is a member of a device and entity.name is not None: friendly_name = f"{device.name} {entity.name}"
+        //name: type + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name, 
+        name: type, // Alarm, Fault, Wireless lost, etc
         availability: getAvailability(),
         device_class: deviceClass,
         value_template: valueTemplate,
@@ -188,16 +191,14 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
     let payload = ''
     if (!reset) {
       payload = {
-        name: config.hadiscovery.events.name
-          ? config.hadiscovery.events.name
-          : `${deviceConfig.name} last event`,
+        name: config.hadiscovery.eventName,
         availability: getAvailability(),
         state_topic: config.topics.alarm.event,
         value_template: '{{value_json.description}}',
         json_attributes_topic: config.topics.alarm.event,
         json_attributes_template: '{{ value_json | tojson }}',
         unique_id: `${alarmId}_events`,
-        icon: config.hadiscovery.events.icon,
+        icon: config.hadiscovery.eventIcon,
         device: deviceConfig,
         qos: config.hadiscovery.sensors_qos
       }
@@ -216,7 +217,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
     let payload = ''
     if (!reset) {
       payload = {
-        name: `comunication status ${deviceConfig.name}`,
+        name:  config.hadiscovery.commStatusName,
         availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{value_json.connectionStatus.connected}}',
@@ -243,8 +244,6 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
      * @returns
      */
   const configSwitchBypass = function (zone, index) {
-    const zoneName = config.hadiscovery.zoneName || 'Zone'
-    const bypassName = config.hadiscovery.bypass.name || 'Bypass'
     let payload = ''
     const zoneId = zone.id
     if (!reset) {
@@ -253,7 +252,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
       })
 
       payload = {
-        name: bypassName + ' ' + zoneName + ' ' + zone.id + ' ' + zone.name,
+        name: config.hadiscovery.bypassName,
         availability: getAvailability(),
         state_topic: stateTopic,
         value_template: `{{ '${config.payloads.sensorOn}' if value_json.bypass else '${config.payloads.sensorOff}' }}`,
@@ -263,7 +262,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
           zoneId: zoneId
         }),
         unique_id: `${alarmId}_zone_${zone.id}_bypass`,
-        icon: config.hadiscovery.bypass.icon,
+        icon: config.hadiscovery.bypassIcon,
         device: getZoneDevice(zone),
         qos: config.hadiscovery.sensors_qos
       }
@@ -286,7 +285,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
     let payload = ''
     if (!reset) {
       payload = {
-        name: `clean cache ${deviceConfig.name} `,
+        name: config.hadiscovery.cleanCacheName,
         availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cacheClear }}',
@@ -315,7 +314,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
     let payload = ''
     if (!reset) {
       payload = {
-        name: `clean discovery ${deviceConfig.name} `,
+        name: config.hadiscovery.cleanCacheDiscoveryName,
         availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.discoveryClear }}',
@@ -348,7 +347,7 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
         areaId: areaId
       })
       payload = {
-        name: `clean triggered ${deviceConfig.name} `,
+        name: config.hadiscovery.cleanCacheTriggeredName,
         availability: getAvailability(),
         state_topic: config.topics.alarm.configStatus,
         value_template: '{{ value_json.cancel }}',
@@ -390,9 +389,9 @@ export default function (config, zonesToConfig, reset, deviceInfo) {
 
       // avoid device name = entity name
       if(config.server.areas > 1){
-        payload.name = `${deviceConfig.name}${' Area ' + areaId }`
+        payload.name = `Area  ${areaId }`
       }else{
-        payload.name = null // entity name generated by Home Assistant using device_class
+        payload.name = null // main entity of the device: entity name generated by Home Assistant using device_class
       }
 
       // optional
