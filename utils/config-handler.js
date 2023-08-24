@@ -292,10 +292,11 @@ export const configHandler = {
     config.mqtt = hassos.mqtt
 
     // merge hadiscovery values
+    config.hadiscovery = {
+      ...hassos.hadiscovery
+    }
     config.hadiscovery.code = hassos.code || hassos.hadiscovery.code || ''
     config.hadiscovery.zoneName = hassos.zoneName || hassos.hadiscovery.zoneName || 'Zone'
-    config.hadiscovery.events = hassos.events || hassos.hadiscovery.events
-    config.hadiscovery.bypass = hassos.bypass || hassos.hadiscovery.bypass
 
     // merge zones
     config.zones = hassos.zones
